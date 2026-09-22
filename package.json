@@ -1,0 +1,16 @@
+{
+  "name": "dsh-plugins",
+  "private": true,
+  "version": "0.0.0",
+  "description": "自研的 DSH（DeepSeek Harness）插件：多包一仓",
+  "type": "module",
+  "packageManager": "pnpm@10.15.0",
+  "engines": {
+    "node": "^22.19.0 || >=24.0.0"
+  },
+  "scripts": {
+    "test": "pnpm -r test",
+    "pack:all": "node scripts/pack-all.mjs",
+    "link-peers": "node scripts/link-peers.mjs"
+  }
+}

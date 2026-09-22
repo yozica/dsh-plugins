@@ -1,0 +1,6 @@
+node_modules/
+dist/
+*.tgz
+.DS_Store
+# 打包/发布的中间产物
+.release/

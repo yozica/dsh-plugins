@@ -1,0 +1,8 @@
+# dsh-plugin-reveal 的 bundle 层：把自己这一行插进 loader。
+#
+# 为什么是个 bundle 而不是普通依赖：bundle 会被写进 profile 的 `dsh.profile.bundles`，
+# 由 dsh 自己按层挂载（`dsh plugin add` 认 `dsh.bundle` 就自动做了）—— 装/卸都不用改
+# profile 自己的补丁层，跟 dshmarket 那些插件一致。
+- insert:
+    - id: reveal
+      name: 'dsh-plugin-reveal'
