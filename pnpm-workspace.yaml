@@ -1,10 +1,2 @@
-# 多包一仓：每个插件是 packages/ 下的一个包。
-#
-# 依赖解析靠 pnpm 正常安装（根 node_modules），不再需要手工 symlink ——
-# 这是把插件从"工作区里的孤儿目录"搬进 workspace 的主要好处：`@deepseek-ai/dsh-tools`
-# 这类内部包在根上一装，所有包从自己的位置往上走都能解析到。
 packages:
   - 'packages/*'
-
-# DSH 是 rc 阶段的宿主，内部 API 会动；插件按它实际的版本装，别让它漂到 0.2 去。
-# （写在这里是提醒：升级 dsh 时同时跑一遍 `pnpm -r test` + 各包 README 的"内部 API 复查表"。）

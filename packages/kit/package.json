@@ -1,0 +1,33 @@
+{
+  "name": "@yozica/dsh-plugin-kit",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "自研 DSH 插件的公共件：把依赖 DSH 内部实现的部分收在一处（零 @deepseek-ai 依赖）",
+  "main": "lib/index.js",
+  "exports": {
+    ".": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./client": {
+      "types": "./lib/types/client.d.ts",
+      "default": "./lib/client.js"
+    },
+    "./build": {
+      "types": "./lib/types/build.d.ts",
+      "default": "./lib/build.js"
+    }
+  },
+  "files": [
+    "lib",
+    "README.md"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "node --import tsx --test test/*.test.ts"
+  }
+}

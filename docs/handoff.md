@@ -13,13 +13,13 @@
 
 **当前已验证的能力边界**（✅ 真机跑通 / 🟡 见过 API 未验证 / ⬜ 未碰）：
 
-| 能加什么 | 靠什么 | 状态 |
-| --- | --- | --- |
-| agent 工具（模型能调的动作） | `ctx.tools.register(definition)` | ✅ |
+| 能加什么                                      | 靠什么                                                       | 状态                       |
+| --------------------------------------------- | ------------------------------------------------------------ | -------------------------- |
+| agent 工具（模型能调的动作）                  | `ctx.tools.register(definition)`                             | ✅                         |
 | 浏览器界面（右栏面板/标签、页面、槽位、命令） | 客户端插件 + `ctx.slots` / `ctx.sidebarRight` / `ctx.layout` | ✅ 打开文件；🟡 自定义面板 |
-| 服务端服务与 HTTP 路由（含 SSE 推送） | `ctx.webServer.register` + `ctx.effect` | ✅ |
-| 会话数据（投影 / 事件） | `ctx.sessionProjections` | 🟡 只见过读侧 |
-| agent 行为（preset / system prompt / hooks） | `dsh-agent-*` / `dsh-hooks-*` | ⬜ 风险最高，暂不设计 |
+| 服务端服务与 HTTP 路由（含 SSE 推送）         | `ctx.webServer.register` + `ctx.effect`                      | ✅                         |
+| 会话数据（投影 / 事件）                       | `ctx.sessionProjections`                                     | 🟡 只见过读侧              |
+| agent 行为（preset / system prompt / hooks）  | `dsh-agent-*` / `dsh-hooks-*`                                | ⬜ 风险最高，暂不设计      |
 
 **本期只做前两行**（工具 + 界面），其余留作以后。
 
@@ -30,15 +30,15 @@
 
 ## 2. 已裁定的框架决定（**不要重新讨论**，要改先提提案）
 
-| # | 决定 | 关键理由 |
-| --- | --- | --- |
-| A | 包名 **`@yozica/dsh-plugin-*`**，只发**官方源**（npmjs.com） | 名字归自己；`publishConfig.access = "public"` 必须在（scoped 默认 restricted） |
-| B | `packages/kit` **薄**：只收"依赖 DSH 内部实现"的东西（自造 tool 定义构造器、地址语法、SSE 频道、客户端包装、DSH 版本断言、自己的最小类型）。**UI/设置/日志等第二个插件真用到再上移** | 所有插件挂在 kit 上，它的表面要小、语义要稳 |
-| C | **零 `@deepseek-ai` 依赖**：插件源码不 import 任何 DSH 包 | 这是"能发公共源、谁的 DSH 都能装"的前提；也顺带消灭"`link:` 装法解析不到内部包 → dsh 起不来"的坑 |
-| D | 源码 **TypeScript**；服务端 `tsc` → `lib/`，客户端 **esbuild** → `lib/client.js` + loader 包装；宿主包标 external | 手写 loader 包装迟早要返工，一次做对 |
-| E | 验证分三层：纯逻辑单测（`node --test`）／契约测试（假 ctx）／**`pnpm e2e`**（起 dsh → CDP 连浏览器 → 断言） | 端到端不能再靠手工（此前是手工做的） |
-| F | 版本用 **changesets**；CI 只跑 test/typecheck/lint/build，**不自动发布** | 沿用既有习惯；发布要人点头 |
-| G | 重建方式：**本地搭好并跑通 → 在 GitHub 上删除旧仓 → 同名重建 → 一次推上去** | 旧对象随删库清掉，名字与 URL 不变 |
+| #   | 决定                                                                                                                                                                                 | 关键理由                                                                                         |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------ |
+| A   | 包名 **`@yozica/dsh-plugin-*`**，只发**官方源**（npmjs.com）                                                                                                                         | 名字归自己；`publishConfig.access = "public"` 必须在（scoped 默认 restricted）                   |
+| B   | `packages/kit` **薄**：只收"依赖 DSH 内部实现"的东西（自造 tool 定义构造器、地址语法、SSE 频道、客户端包装、DSH 版本断言、自己的最小类型）。**UI/设置/日志等第二个插件真用到再上移** | 所有插件挂在 kit 上，它的表面要小、语义要稳                                                      |
+| C   | **零 `@deepseek-ai` 依赖**：插件源码不 import 任何 DSH 包                                                                                                                            | 这是"能发公共源、谁的 DSH 都能装"的前提；也顺带消灭"`link:` 装法解析不到内部包 → dsh 起不来"的坑 |
+| D   | 源码 **TypeScript**；服务端 `tsc` → `lib/`，客户端 **esbuild** → `lib/client.js` + loader 包装；宿主包标 external                                                                    | 手写 loader 包装迟早要返工，一次做对                                                             |
+| E   | 验证分三层：纯逻辑单测（`node --test`）／契约测试（假 ctx）／**`pnpm e2e`**（起 dsh → CDP 连浏览器 → 断言）                                                                          | 端到端不能再靠手工（此前是手工做的）                                                             |
+| F   | 版本用 **changesets**；CI 只跑 test/typecheck/lint/build，**不自动发布**                                                                                                             | 沿用既有习惯；发布要人点头                                                                       |
+| G   | 重建方式：**本地搭好并跑通 → 在 GitHub 上删除旧仓 → 同名重建 → 一次推上去**                                                                                                          | 旧对象随删库清掉，名字与 URL 不变                                                                |
 
 ---
 
@@ -66,8 +66,10 @@
 
 ```js
 export const name = 'plugin-xxx';
-export const inject = ['tools', 'webServer', 'fs'];   // 需要的宿主服务
-export function apply(ctx) { /* 注册工具 / 路由 … */ }
+export const inject = ['tools', 'webServer', 'fs']; // 需要的宿主服务
+export function apply(ctx) {
+  /* 注册工具 / 路由 … */
+}
 ```
 
 - **注册 agent 工具**：`ctx.tools.register(definition)`。`definition` 只要求：
@@ -87,18 +89,21 @@ export function apply(ctx) { /* 注册工具 / 路由 … */ }
 ```js
 window.__ModuleLoader__.load({
   id: '<包名>',
-  factory: (require) => {                     // 宿主包用 require(...) 拿（构建期标 external）
+  factory: (require) => {
+    // 宿主包用 require(...) 拿（构建期标 external）
     var module = { exports: {} };
     var exports = module.exports;
     exports.name = 'plugin-xxx';
-    exports.inject = ['sidebarRight'];        // ← 服务名（不是包名）
-    exports.apply = function apply(ctx) { /* ctx.sidebarRight / ctx.effect … */ };
+    exports.inject = ['sidebarRight']; // ← 服务名（不是包名）
+    exports.apply = function apply(ctx) {
+      /* ctx.sidebarRight / ctx.effect … */
+    };
     return module.exports;
   },
 });
 ```
 
-- 客户端能用的跨插件面（已核实）：**`ctx.sidebarRight`**（注释里写明 *Cross-plugin right-Sidebar face*）：
+- 客户端能用的跨插件面（已核实）：**`ctx.sidebarRight`**（注释里写明 _Cross-plugin right-Sidebar face_）：
   `openResource(address, options?)` / `openTab(kind, options?)` / `focus`。
   官方对话页打开文件走的就是 `ctx.sidebarRight.openResource(address)`。
 - `dsh.client.inject` 里写的是**宿主包的包名**（如 `@deepseek-ai/dsh-client-ui-sidebar-right`），
@@ -130,14 +135,14 @@ dsh-resource://file/session/<sessionId>/<path>
 
 ## 4. 已经踩过的坑（**照着避，别重复付学费**）
 
-| 症状（原始报错） | 原因 | 正确做法 |
-| --- | --- | --- |
+| 症状（原始报错）                                                                                                                     | 原因                                                            | 正确做法                                                                                           |
+| ------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
 | `dsh: plugin tree failed to load: … Cannot find package '@deepseek-ai/dsh-tools' imported from …/lib/index.js` —— **dsh 完全起不来** | 插件用 `link:` 装（真身在仓里），ESM 从插件位置往上找不到内部包 | 决定 C：插件**不 import** 任何 `@deepseek-ai/*`；万不得已才用"把内部包链到 dsh 安装目录"的兜底脚本 |
-| 插件装上了，但界面没反应 | 只写了服务端半边 / 客户端 inject 写成了包名以外的错值 | 两半都要有；`dsh.client.inject` 写**包名**，代码里 `inject` 写**服务名** |
-| 新工具"装了但模型看不到" | 工具面在会话启动时确定 | **新开一个会话**再试 |
-| 面板打开了但内容空白 / 报错 | 地址语法错了（尤其"工作区外绝对路径要保留前导 `/`"这条） | 用 kit 的地址构造函数 + 单测（见 3.4） |
-| 卸载/升级后行为不对 | 改的是 profile 的 `bundles`，dsh 没重启 | 重启 dsh |
-| 打包脚本在受限环境报错 `Log files were not written … ~/.npm/_logs` | `npm pack` 默认写 HOME | 给 `npm pack` 显式传 `--cache/--logs-dir` 到仓内目录 |
+| 插件装上了，但界面没反应                                                                                                             | 只写了服务端半边 / 客户端 inject 写成了包名以外的错值           | 两半都要有；`dsh.client.inject` 写**包名**，代码里 `inject` 写**服务名**                           |
+| 新工具"装了但模型看不到"                                                                                                             | 工具面在会话启动时确定                                          | **新开一个会话**再试                                                                               |
+| 面板打开了但内容空白 / 报错                                                                                                          | 地址语法错了（尤其"工作区外绝对路径要保留前导 `/`"这条）        | 用 kit 的地址构造函数 + 单测（见 3.4）                                                             |
+| 卸载/升级后行为不对                                                                                                                  | 改的是 profile 的 `bundles`，dsh 没重启                         | 重启 dsh                                                                                           |
+| 打包脚本在受限环境报错 `Log files were not written … ~/.npm/_logs`                                                                   | `npm pack` 默认写 HOME                                          | 给 `npm pack` 显式传 `--cache/--logs-dir` 到仓内目录                                               |
 
 ---
 
@@ -163,26 +168,33 @@ dsh-plugins/
 
 ### 5.2 步骤与验收
 
-| 步 | 做什么 | 验收（**必须真跑**） |
-| --- | --- | --- |
-| **1** | 根清单 + workspace + TS 配置 + `packages/kit` 骨架 + `templates/plugin` + 构建脚本 | `pnpm install`、`pnpm build`、`pnpm -r test` 三条命令通过 |
+| 步    | 做什么                                                                                                   | 验收（**必须真跑**）                                                                                                                                                    |
+| ----- | -------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **1** | 根清单 + workspace + TS 配置 + `packages/kit` 骨架 + `templates/plugin` + 构建脚本                       | `pnpm install`、`pnpm build`、`pnpm -r test` 三条命令通过                                                                                                               |
 | **2** | 把 `reveal` 迁进 `packages/reveal`：改用 TS + kit（工具定义、SSE 频道、客户端包装、地址语法都从 kit 取） | 单测绿；**契约测试**（假 ctx 断言"注册了名为 reveal 的工具、挂了 `/plugin-reveal/events` 路由"）绿；`lib/` 产物形状对（`main` 与服务端 `exports["./client"]` 都能加载） |
-| **3** | `pnpm e2e`：起 dsh → CDP 连浏览器 → 断言 | 一条命令给出结论（见 §6.2 配方） |
-| **4** | CI + changesets + 文档定稿（architecture / plugin-contract / decisions / 每个插件的 README） | 本地等价命令全绿；`npx changeset status` 有片段 |
-| **5** | GitHub：删除旧仓 → 同名重建 → 推 | 远端旧 SHA 查不到；URL 与名字不变；CI 绿 |
+| **3** | `pnpm e2e`：起 dsh → CDP 连浏览器 → 断言                                                                 | 一条命令给出结论（见 §6.2 配方）                                                                                                                                        |
+| **4** | CI + changesets + 文档定稿（architecture / plugin-contract / decisions / 每个插件的 README）             | 本地等价命令全绿；`npx changeset status` 有片段                                                                                                                         |
+| **5** | GitHub：删除旧仓 → 同名重建 → 推                                                                         | 远端旧 SHA 查不到；URL 与名字不变；CI 绿                                                                                                                                |
 
 ### 5.3 kit 的最小表面（建议签名，可调整）
 
 ```ts
 // 服务端
-export function defineTool(def: { name, description, parameters, output, execute, timeoutMs? }): ToolDefinition;
+export function defineTool(def: {
+  name;
+  description;
+  parameters;
+  output;
+  execute;
+  timeoutMs?;
+}): ToolDefinition;
 export function sessionFileAddress(sessionId: string, path: string): string;
 export function fileAddressFor(sessionId: string, cwd: string | undefined, path: string): string;
-export function assertDshVersion(ctx: unknown, expected: string): void;   // 不匹配只告警、不崩
+export function assertDshVersion(ctx: unknown, expected: string): void; // 不匹配只告警、不崩
 export function sseChannel(ctx): { register(path): void; broadcast(frame): number };
 
 // 客户端（构建期使用）
-export function wrapClient(id: string, body: string): string;             // 生成 __ModuleLoader__ 包装
+export function wrapClient(id: string, body: string): string; // 生成 __ModuleLoader__ 包装
 export function subscribeReveal(ctx, path: string, handler: (frame) => void): void;
 ```
 
@@ -198,6 +210,7 @@ grep -n "register(definition)" "$DSH/node_modules/@deepseek-ai/dsh-tools/lib/ind
 grep -n "Cross-plugin right-Sidebar face" -r "$DSH/node_modules/@deepseek-ai/dsh-client-ui-sidebar-right/lib/client.js"
 grep -n "dsh-resource://file/" -r "$DSH/node_modules/@deepseek-ai/dsh-util-workspace-path/lib/index.js"
 ```
+
 三条都在 → 契约与本文一致，可以开工；任何一条找不到 → **先报告**，别硬写。
 
 ### 6.1 静态与单测
@@ -246,6 +259,7 @@ python3 -c "import json;print(json.load(open('$HOME/.dsh/profiles/web/package.js
 
   **提交里不要出现公司信息**：不写内部服务域名/名称、不写凭据、不写本机绝对路径与用户名
   （模板、脚本、文档、测试夹具都算）。
+
 - **发布（官方源）**：
   - `npm whoami` 确认身份；scope 必须归你（同名用户名，或你建的 org）；
   - 各包 `publishConfig: { access: "public" }`（scoped 默认是 private）；
@@ -257,12 +271,12 @@ python3 -c "import json;print(json.load(open('$HOME/.dsh/profiles/web/package.js
 
 ## 8. 现状清单（交接时的真实状态）
 
-| 东西 | 位置 / 状态 |
-| --- | --- |
-| 现有插件实现（参考实现，含服务端/客户端/单测/README/bundle 补丁） | `<本仓>/packages/reveal/`（若沿用旧目录则是 `dsh-plugin-reveal/`） |
-| 已装进本机 profile | `~/.dsh/profiles/web` 的 `dependencies` 里是 `link:` 到本仓 `packages/reveal`；`dsh.profile.bundles` 里有 `dsh-plugin-reveal` |
-| 本机环境 | macOS / Node 24（nvm）/ pnpm 10.15.0 / DSH 0.1.5-rc.2 |
-| 待办 | 删旧仓 → 重建 → 推；之后按 §5 逐步实现 |
+| 东西                                                              | 位置 / 状态                                                                                                                   |
+| ----------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| 现有插件实现（参考实现，含服务端/客户端/单测/README/bundle 补丁） | `<本仓>/packages/reveal/`（若沿用旧目录则是 `dsh-plugin-reveal/`）                                                            |
+| 已装进本机 profile                                                | `~/.dsh/profiles/web` 的 `dependencies` 里是 `link:` 到本仓 `packages/reveal`；`dsh.profile.bundles` 里有 `dsh-plugin-reveal` |
+| 本机环境                                                          | macOS / Node 24（nvm）/ pnpm 10.15.0 / DSH 0.1.5-rc.2                                                                         |
+| 待办                                                              | 删旧仓 → 重建 → 推；之后按 §5 逐步实现                                                                                        |
 
 **不要动**：`dsh-console` 那个仓（另一个项目，有 3 个未合并的 PR）。本项目的改动只在本仓。
 
@@ -284,26 +298,78 @@ python3 -c "import json;print(json.load(open('$HOME/.dsh/profiles/web/package.js
 export const inject = ['tools', 'webServer', 'fs'];
 export function apply(ctx) {
   const connections = new Set();
-  const broadcast = (frame) => { const line = sseData(frame); let n = 0;
-    for (const res of connections) { try { res.write(line); n += 1; } catch { connections.delete(res); } } return n; };
+  const broadcast = (frame) => {
+    const line = sseData(frame);
+    let n = 0;
+    for (const res of connections) {
+      try {
+        res.write(line);
+        n += 1;
+      } catch {
+        connections.delete(res);
+      }
+    }
+    return n;
+  };
   ctx.effect(() => {
-    const dispose = ctx.webServer.register({ kind: 'exact', path: '/plugin-reveal/events',
-      handler: (req, res) => { res.writeHead(200, { 'content-type': 'text/event-stream', 'cache-control': 'no-cache', connection: 'keep-alive' });
-        res.write(': channel\n\n'); connections.add(res); res.on('close', () => connections.delete(res)); } });
-    return () => { dispose(); for (const r of connections) { try { r.destroy(); } catch {} } connections.clear(); };
+    const dispose = ctx.webServer.register({
+      kind: 'exact',
+      path: '/plugin-reveal/events',
+      handler: (req, res) => {
+        res.writeHead(200, {
+          'content-type': 'text/event-stream',
+          'cache-control': 'no-cache',
+          connection: 'keep-alive',
+        });
+        res.write(': channel\n\n');
+        connections.add(res);
+        res.on('close', () => connections.delete(res));
+      },
+    });
+    return () => {
+      dispose();
+      for (const r of connections) {
+        try {
+          r.destroy();
+        } catch {}
+      }
+      connections.clear();
+    };
   }, 'plugin-reveal: events channel');
-  ctx.tools.register(defineTool({ name: 'reveal', description: '在右侧栏打开文件给人看…',
-    parameters: { path: { type: 'string', required: true }, line: { type: 'integer' } },
-    output: { schema: { type: 'object', additionalProperties: false,
-      properties: { opened: { type: 'boolean', required: true }, path: { type: 'string', required: true }, clients: { type: 'integer', required: true } } },
-      render: (_a, v) => [{ type: 'text', text: v.opened ? `已打开 ${v.path}` : `没能打开 ${v.path}` }] },
-    async execute(args, exec) {
-      const s = exec.agent.session; const cwd = s.header.cwd;
-      const entry = await ctx.fs.lstat(args.path, { cwd }, exec.signal);
-      if (!entry || entry.type !== 'file') throw new Error(`reveal：不是常规文件：${args.path}`);
-      const clients = broadcast({ type: 'reveal', address: fileAddressFor(s.header.id, cwd, args.path), path: args.path, line: args.line ?? null });
-      return { opened: clients > 0, path: args.path, clients };
-    } }));
+  ctx.tools.register(
+    defineTool({
+      name: 'reveal',
+      description: '在右侧栏打开文件给人看…',
+      parameters: { path: { type: 'string', required: true }, line: { type: 'integer' } },
+      output: {
+        schema: {
+          type: 'object',
+          additionalProperties: false,
+          properties: {
+            opened: { type: 'boolean', required: true },
+            path: { type: 'string', required: true },
+            clients: { type: 'integer', required: true },
+          },
+        },
+        render: (_a, v) => [
+          { type: 'text', text: v.opened ? `已打开 ${v.path}` : `没能打开 ${v.path}` },
+        ],
+      },
+      async execute(args, exec) {
+        const s = exec.agent.session;
+        const cwd = s.header.cwd;
+        const entry = await ctx.fs.lstat(args.path, { cwd }, exec.signal);
+        if (!entry || entry.type !== 'file') throw new Error(`reveal：不是常规文件：${args.path}`);
+        const clients = broadcast({
+          type: 'reveal',
+          address: fileAddressFor(s.header.id, cwd, args.path),
+          path: args.path,
+          line: args.line ?? null,
+        });
+        return { opened: clients > 0, path: args.path, clients };
+      },
+    }),
+  );
 }
 ```
 
@@ -314,9 +380,18 @@ exports.inject = ['sidebarRight'];
 exports.apply = function apply(ctx) {
   const source = new EventSource('/plugin-reveal/events');
   source.addEventListener('message', (e) => {
-    let frame; try { frame = JSON.parse(e.data); } catch { return; }
+    let frame;
+    try {
+      frame = JSON.parse(e.data);
+    } catch {
+      return;
+    }
     if (!frame || frame.type !== 'reveal' || typeof frame.address !== 'string') return;
-    try { ctx.sidebarRight.openResource(frame.address); } catch (err) { console.warn('[reveal]', err); }
+    try {
+      ctx.sidebarRight.openResource(frame.address);
+    } catch (err) {
+      console.warn('[reveal]', err);
+    }
   });
   if (typeof ctx.effect === 'function') ctx.effect(() => () => source.close());
 };

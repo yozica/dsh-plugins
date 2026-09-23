@@ -54,7 +54,7 @@ window.__ModuleLoader__.load({
 ```
 
 - 这层包装要**手写**（官方包是构建产物）。本地插件没有构建步骤，别用 `import`。
-- `ctx.sidebarRight` 是 DSH 有意暴露的**跨插件面**（注释原话 *Cross-plugin right-Sidebar face*）：
+- `ctx.sidebarRight` 是 DSH 有意暴露的**跨插件面**（注释原话 _Cross-plugin right-Sidebar face_）：
   `openResource(address, options?)` / `openTab(kind, options?)` / `focus`。
 - 客户端能 `require('@deepseek-ai/dsh-client-*')` —— 那些包自带客户端面；
   但 `dsh-util-workspace-path` 这类**没有客户端面**的包在浏览器里 require 不到，

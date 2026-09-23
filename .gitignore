@@ -1,6 +1,7 @@
 node_modules/
+lib/
 dist/
+.release/
 *.tgz
 .DS_Store
-# 打包/发布的中间产物
-.release/
+.npm-cache/

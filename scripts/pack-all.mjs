@@ -15,9 +15,9 @@ fs.rmSync(out, { recursive: true, force: true });
 fs.mkdirSync(out, { recursive: true });
 
 const packagesDir = path.join(root, 'packages');
-const names = fs.readdirSync(packagesDir).filter((name) =>
-  fs.existsSync(path.join(packagesDir, name, 'package.json')),
-);
+const names = fs
+  .readdirSync(packagesDir)
+  .filter((name) => fs.existsSync(path.join(packagesDir, name, 'package.json')));
 
 for (const name of names) {
   const dir = path.join(packagesDir, name);
@@ -26,7 +26,15 @@ for (const name of names) {
   // 缓存与日志目录放在仓内：npm 默认写 ~/.npm，受限环境（沙箱 / CI）里会直接失败。
   execFileSync(
     'npm',
-    ['pack', '--pack-destination', out, '--cache', path.join(out, '.npm-cache'), '--logs-dir', path.join(out, '.npm-logs')],
+    [
+      'pack',
+      '--pack-destination',
+      out,
+      '--cache',
+      path.join(out, '.npm-cache'),
+      '--logs-dir',
+      path.join(out, '.npm-logs'),
+    ],
     { cwd: dir, stdio: 'inherit' },
   );
 }

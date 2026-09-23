@@ -1,49 +1,38 @@
 # dsh-plugins
 
-自研的 DSH（DeepSeek Harness）插件，**多包一仓**（pnpm workspace）。每个插件是 `packages/` 下的一个包，
-都按 DSH 的插件契约写：服务端半边（cordis 插件）+ 浏览器半边（客户端模块）+ 自带一层 `cordis.patch.yml`。
+自研的 **DSH（DeepSeek Harness）插件**，多包一仓。每个插件都是 DSH 的**双面插件**：
+服务端半边（agent 工具 / 路由）+ 浏览器半边（界面），两半之间用一条 SSE 频道连起来。
 
-## 常用命令
+- 框架与裁定： [`docs/architecture.md`](docs/architecture.md)
+- DSH 插件契约（真机核对）： [`docs/plugin-contract.md`](docs/plugin-contract.md)
+- 交接/背景： [`docs/handoff.md`](docs/handoff.md)
 
-```bash
-pnpm install            # 装全部包的依赖（含 @deepseek-ai/dsh-tools 这类 DSH 内部包）
-pnpm -r test            # 跑每个包的测试（纯逻辑单测，不需要 dsh 在跑）
-pnpm pack               # 把所有包打成 tarball 到 .release/（给人装 / 准备发布）
-```
-
-## 装到 dsh 里（两种模式）
+## 命令
 
 ```bash
-# 开发：link 装 —— 改源码立刻生效（依赖已由 pnpm install 装在仓库根）
-dsh plugin --profile web add "$PWD/packages/<包名>"
+pnpm install                 # 装全部包的依赖（仓根）
+pnpm build                   # kit tsc → 各插件 tsc + esbuild（浏览器半边）
+pnpm -r test                 # 单测：纯逻辑 + 契约（假 ctx）
+pnpm check:dist              # 产物形状：宿主认不认（服务端导出 / loader 包装 / host require）
+pnpm format / format:check   # Prettier
 
-# 发布/给人用：pack 出来的 tarball —— 真拷贝，依赖由 pnpm 装进 profile
-pnpm run pack:all
-dsh plugin --profile web add "$PWD/.release/<包名>-<版本>.tgz"
+pnpm install:dev packages/reveal   # 把一个包 link 进 profile（开发用）
+pnpm pack:all                      # 打 tarball 到 .release/（给人装 / 准备发布）
 ```
 
-两种都是同一条 `dsh plugin` 命令，只是 pnpm 从哪儿取包。装完记得：**重启 dsh + 新开会话**
-（工具面/客户端模块是会话启动时定下的）。
-
-## 目录
+## 结构
 
 ```
-packages/<包名>/       一个插件
-  package.json         main（服务端）/ exports["./client"]（客户端）/ dsh.bundle / dsh.client
-  cordis.patch.yml     把自己这行插进 loader（bundle 装法靠它）
-  lib/index.js         服务端：export name / inject / apply
-  lib/client.js        客户端：window.__ModuleLoader__.load({ id, factory })
-  test/*.test.mjs      纯逻辑单测
-docs/plugin-contract.md 插件契约与踩过的坑（新插件先读它）
-scripts/               仓库级脚本（打包、兜底的 peer 链接）
+packages/kit/        公共件：工具定义构造器、地址语法、SSE 频道、客户端包装、能力断言（零 @deepseek-ai 依赖）
+packages/reveal/     第一个插件：reveal(path) —— 在右侧栏打开文件给人看
+scripts/             build-client（esbuild + loader 包装）/ check-dist / install-dev / pack-all
+docs/                架构、契约、交接
 ```
 
 ## 加一个新插件
 
-1. `cp -R packages/reveal packages/<新名>`，改 `package.json` 的 `name` / `description`；
+1. `cp -R packages/reveal packages/<你的包>`，改 `package.json` 的 `name`（`@yozica/dsh-plugin-<名>`）与 `description`；
 2. 改 `cordis.patch.yml` 里的 `id` / `name`；
-3. 写你要的两半（只写一半也合法：纯客户端或纯服务端）；
-4. `pnpm install` → `pnpm -r test` → 按上面两种模式装进去试。
-
-（脚手架脚本 `scripts/new-plugin.mjs` 还没做；现在照 `packages/reveal` 抄一遍就够，
-真要批量做的时候再补 —— 这属于"以后"，别提前把结构做复杂。）
+3. 写两半：`src/index.ts`（服务端：`export name / inject / apply`）+ `src/browser.ts`（浏览器：`export name / inject / apply`，只用 kit 的 `/client`）；
+4. `pnpm install`（建 workspace 链接）→ `pnpm build` → `pnpm -r test` → `pnpm check:dist`；
+5. `pnpm install:dev packages/<你的包>` 装进 dsh 试；验证清单见 `packages/reveal/README.md` 的"验证"段。

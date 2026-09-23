@@ -1,78 +1,112 @@
-/**
- * dsh-plugin-reveal 的浏览器那一半。
- *
- * 它只做一件事：订阅服务端的 SSE 通道，收到 `{type:'reveal', address, line}` 就调
- * `ctx.sidebarRight.openResource(address[, { params: { line } }])` —— 面板就打开了。
- * （`ctx.sidebarRight` 是 `@deepseek-ai/dsh-client-ui-sidebar-right` 提供的**跨插件面**，
- * DSH 自己的对话页打开文件走的也是这一个调用。）
- *
- * 这个文件是**手写的 loader 包装**（和 `@deepseek-ai/dsh-client-ui-*` 那些包编译出来的形状一致）：
- * 客户端模块由 `window.__ModuleLoader__` 装载，不是浏览器原生 ESM —— 本地插件没有构建步骤，
- * 所以这层包装得自己写。
- *
- * 失败姿态：连不上 / 帧不合法 / 打开报错，都只 `console.warn` 一次，绝不影响界面。
- */
+// 由 @yozica/dsh-plugin-kit/build 生成 —— 不要手改这个文件，改 src/client/。
 window.__ModuleLoader__.load({
-  id: 'dsh-plugin-reveal',
-  factory: () => {
+  id: "@yozica/dsh-plugin-reveal",
+  factory: (require) => {
     var module = { exports: {} };
     var exports = module.exports;
-    Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
+    "use strict";
+    var __defProp = Object.defineProperty;
+    var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+    var __getOwnPropNames = Object.getOwnPropertyNames;
+    var __hasOwnProp = Object.prototype.hasOwnProperty;
+    var __export = (target, all) => {
+      for (var name2 in all)
+        __defProp(target, name2, { get: all[name2], enumerable: true });
+    };
+    var __copyProps = (to, from, except, desc) => {
+      if (from && typeof from === "object" || typeof from === "function") {
+        for (let key of __getOwnPropNames(from))
+          if (!__hasOwnProp.call(to, key) && key !== except)
+            __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
+      }
+      return to;
+    };
+    var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
-    /** 与服务端同一个通道（见 lib/index.js 的 EVENTS_ENDPOINT） */
-    var ENDPOINT = '/plugin-reveal/events';
+    // src/browser.ts
+    var browser_exports = {};
+    __export(browser_exports, {
+      apply: () => apply,
+      inject: () => inject,
+      name: () => name,
+      parseRevealFrame: () => parseRevealFrame
+    });
+    module.exports = __toCommonJS(browser_exports);
 
-    /** 客户端服务名：右栏（`@deepseek-ai/dsh-client-ui-sidebar-right` 提供） */
-    var inject = ['sidebarRight'];
-
-    /** 校验一帧，别让坏 JSON 碰状态 */
-    function parseFrame(value) {
-      if (typeof value !== 'object' || value === null) return null;
-      if (value.type !== 'reveal') return null;
-      if (typeof value.address !== 'string' || value.address === '') return null;
-      return {
-        address: value.address,
-        line: typeof value.line === 'number' && Number.isFinite(value.line) ? value.line : null,
-      };
+    // ../kit/lib/services.js
+    var DSH_TESTED_VERSION = "0.1.5-rc.2";
+    function requireClientServices(ctx, names) {
+      const record = ctx;
+      const missing = names.filter((name2) => record[name2] === void 0 || record[name2] === null);
+      if (missing.length > 0) {
+        ctx.logger?.warn(`[dsh-plugin-kit] \u8FD9\u4E2A\u754C\u9762\u7F3A\u5C11\u670D\u52A1\uFF1A${missing.join(", ")}\uFF08kit \u662F\u6309 ${DSH_TESTED_VERSION} \u6838\u5BF9\u7684\uFF09\u3002`);
+      }
+      return { ok: missing.length === 0, missing };
     }
 
-    function apply(ctx) {
-      if (typeof EventSource !== 'function') return;
-      var source = new EventSource(ENDPOINT);
-      var warned = false;
-
-      source.addEventListener('message', function (event) {
-        var frame;
+    // ../kit/lib/client.js
+    function subscribeSse(ctx, path, onFrame) {
+      if (typeof EventSource !== "function")
+        return () => {
+        };
+      const source = new EventSource(path);
+      source.addEventListener("message", (event) => {
+        let frame;
         try {
-          frame = parseFrame(JSON.parse(event.data));
-        } catch (error) {
+          frame = JSON.parse(String(event.data));
+        } catch {
           return;
         }
-        if (frame === null) return;
         try {
-          if (frame.line === null) ctx.sidebarRight.openResource(frame.address);
-          else ctx.sidebarRight.openResource(frame.address, { params: { line: frame.line } });
+          onFrame(frame);
         } catch (error) {
-          if (!warned) {
-            warned = true;
-            console.warn('[reveal] 打开失败：', error);
-          }
+          ctx.logger?.warn("[dsh-plugin-kit] \u5904\u7406\u63A8\u9001\u65F6\u51FA\u9519\uFF1A", error);
         }
       });
-
-      if (typeof ctx.effect === 'function') {
-        ctx.effect(function () {
-          return function () {
-            source.close();
-          };
-        });
+      const close = () => source.close();
+      if (typeof ctx.effect === "function")
+        ctx.effect(() => close);
+      return close;
+    }
+    function openResource(ctx, address, line) {
+      const { ok } = requireClientServices(ctx, ["sidebarRight"]);
+      if (!ok)
+        return false;
+      const sidebar = ctx.sidebarRight;
+      try {
+        if (line === void 0)
+          sidebar?.openResource(address);
+        else
+          sidebar?.openResource(address, { params: { line } });
+        return true;
+      } catch (error) {
+        ctx.logger?.warn("[dsh-plugin-kit] \u6253\u5F00\u53F3\u4FA7\u680F\u5931\u8D25\uFF1A", error);
+        return false;
       }
     }
 
-    exports.ENDPOINT = ENDPOINT;
-    exports.apply = apply;
-    exports.inject = inject;
-    exports.name = 'plugin-reveal';
+    // src/shared/endpoints.ts
+    var EVENTS_ENDPOINT = "/plugin-reveal/events";
+
+    // src/browser.ts
+    var name = "plugin-reveal";
+    var inject = ["sidebarRight"];
+    function parseRevealFrame(value) {
+      if (typeof value !== "object" || value === null) return null;
+      const record = value;
+      if (record.type !== "reveal") return null;
+      if (typeof record.address !== "string" || record.address === "") return null;
+      const line = typeof record.line === "number" && Number.isFinite(record.line) ? record.line : null;
+      return { type: "reveal", address: record.address, path: String(record.path ?? ""), line };
+    }
+    function apply(ctx) {
+      subscribeSse(ctx, EVENTS_ENDPOINT, (raw) => {
+        const frame = parseRevealFrame(raw);
+        if (frame === null) return;
+        openResource(ctx, frame.address, frame.line ?? void 0);
+      });
+    }
+
     return module.exports;
   },
 });
