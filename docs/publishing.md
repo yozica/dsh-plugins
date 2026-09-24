@@ -36,6 +36,15 @@ npm 在检测到**安全敏感操作**后会把账号置为只读 72 小时：**
   `Your account has been temporarily suspended due to a recent security-sensitive action.`
 - 如果**并没有**用 recovery code 登录却被冻结 ⇒ 属于异常，立刻联系 [npm Support](https://www.npmjs.com/support)。
 - 结论：**冻结期内不要反复重试**（每次都只是同一个 404），等解冻再发。
+- 想知道解冻没有（探测用，不改动任何东西：故意发一个**不完整**的 publish 文档）：
+
+  ```bash
+  curl -sS -o /dev/null -w '%{http_code}\n' -X PUT \
+    -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
+    --data '{"name":"@yozica/dsh-plugin-kit","access":"public"}' \
+    https://registry.npmjs.org/@yozica%2fdsh-plugin-kit
+  # 404 = 仍被写保护（冻结期症状）；其它 4xx（如 400）= 写路径已放行，可以正式发了
+  ```
 
 ## 首发（本地，一次，解冻后）
 
