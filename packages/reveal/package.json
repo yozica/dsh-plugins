@@ -29,6 +29,11 @@
     "cordis.patch.yml",
     "README.md"
   ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yozica/dsh-plugins.git",
+    "directory": "packages/reveal"
+  },
   "publishConfig": {
     "access": "public",
     "registry": "https://registry.npmjs.org/"
