@@ -12,7 +12,8 @@
 ```bash
 pnpm install                 # 装全部包的依赖（仓根）
 pnpm build                   # kit tsc → 各插件 tsc + esbuild（浏览器半边）
-pnpm -r test                 # 单测：纯逻辑 + 契约（假 ctx）
+pnpm test                    # = build + 各包单测（测试跑的是产物，所以先构建；只想跑测试用 test:only）
+pnpm test:only               # 只跑各包单测（需要先 build 过）
 pnpm check:dist              # 产物形状：宿主认不认（服务端导出 / loader 包装 / host require）
 pnpm e2e                     # 端到端：真起 dsh + 真开 headless Chrome，断言"面板真的打开"（见下）
 pnpm format / format:check   # Prettier

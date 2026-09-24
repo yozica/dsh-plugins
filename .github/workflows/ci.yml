@@ -20,12 +20,12 @@ jobs:
       - run: corepack enable
       - run: corepack prepare pnpm@10.15.0 --activate
       - run: pnpm install --frozen-lockfile
-      - name: 单测（纯逻辑 + 契约）
-        run: pnpm -r test
-      - name: 类型
-        run: pnpm typecheck
       - name: 构建（kit tsc → 插件 tsc + esbuild）
         run: pnpm build
+      - name: 单测（纯逻辑 + 契约；测试解析的是构建产物，所以先构建）
+        run: pnpm test:only
+      - name: 类型
+        run: pnpm typecheck
       - name: 产物形状（宿主认不认）
         run: pnpm check:dist
       - name: 格式
