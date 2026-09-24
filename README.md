@@ -14,6 +14,7 @@ pnpm install                 # 装全部包的依赖（仓根）
 pnpm build                   # kit tsc → 各插件 tsc + esbuild（浏览器半边）
 pnpm -r test                 # 单测：纯逻辑 + 契约（假 ctx）
 pnpm check:dist              # 产物形状：宿主认不认（服务端导出 / loader 包装 / host require）
+pnpm e2e                     # 端到端：真起 dsh + 真开 headless Chrome，断言"面板真的打开"（见下）
 pnpm format / format:check   # Prettier
 
 pnpm install:dev packages/reveal   # 把一个包 link 进 profile（开发用）
@@ -43,6 +44,17 @@ npm publish --dry-run --access public    # 发之前先试跑：只看会发什�
 ```bash
 pnpm build && pnpm -r test && pnpm check:dist    # 产物形状不对就别发
 ```
+
+## 三层验证（都是命令，不靠"看起来在跑"）
+
+| 层            | 命令              | 跑的是什么                                                                                                      |
+| ------------- | ----------------- | --------------------------------------------------------------------------------------------------------------- |
+| 纯逻辑 + 契约 | `pnpm -r test`    | `src/`：地址语法、工具定义、SSE 频道、用假 ctx 断言"注册了什么"                                                 |
+| 产物形状      | `pnpm check:dist` | `lib/`：服务端导出 `name/inject/apply`；浏览器边是 loader 包装且 **host require 为空**                          |
+| 端到端        | `pnpm e2e`        | **真起 dsh + headless Chrome**：客户端半边进模块图 → 推一帧 → 右侧栏真的打开该文件（留档截图在 `.verify/e2e/`） |
+
+`pnpm e2e` 会自己把插件装进 profile（并清掉历史遗留的旧包名 —— 两个包插同一个 `id` 会让 dsh 起不来）、
+用独立端口起 dsh、跑完清进程；`--keep` 可以留着看现场，`--port` 换端口。
 
 ## 结构
 
