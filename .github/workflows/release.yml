@@ -6,15 +6,22 @@
 # 标签形如 `@yozica/dsh-plugin-reveal@0.1.1`（由本地的 `pnpm changeset tag` 生成）——
 # 每个包各自版本号，所以不能用单一的 vX.Y.Z。
 #
-# 需要的一次性配置：仓库 Settings → Secrets and variables → Actions → 新增 `NPM_TOKEN`，
-# 内容是一个 npm **Automation / Granular（bypass 2FA）** token，对 `@yozica` scope 有发布权限。
-# （开了 2FA 的账号不能用普通 token 发布，这是 npm 的规矩，不是本仓的限制。）
+# 认证 = **Trusted Publishing（GitHub OIDC）**，本仓不存任何 secret：
+#   - 每个包要在 npmjs 的包页面 → Settings → Trusted Publisher 里配一次
+#     （Organization or user = yozica，Repository = dsh-plugins，Workflow filename = release.yml）。
+#     配好之前，CI 发布会以 ENEEDAUTH / 被掩盖的 404 失败 —— 见 docs/publishing.md。
+#   - 因此这里必须给 id-token: write；同时**不要再设 NODE_AUTH_TOKEN**，否则 npm 会走 token 那条路。
+#   - package.json 的 repository.url 必须与 GitHub 仓库完全一致，否则发布会 ENEEDAUTH。
 name: release
 
 on:
   push:
     tags:
       - '**@*'
+
+permissions:
+  contents: read
+  id-token: write # ← Trusted Publishing 必需
 
 jobs:
   publish:
@@ -32,16 +39,14 @@ jobs:
       - name: 发布前三条硬检查
         run: pnpm build && pnpm test:only && pnpm check:dist
 
-      - name: 检查 npm token 在不在
-        env:
-          TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: npm 版本够不够（Trusted Publishing 需要 ≥ 11.5.1）
         run: |
-          if [ -z "$TOKEN" ]; then
-            echo "::error::缺 NPM_TOKEN 这个 secret。到仓库 Settings → Secrets and variables → Actions 加一个，            内容为 npm Automation token（@yozica scope 有发布权限）。加完重新打一次标签即可。"
+          NPM_V=$(npm -v)
+          echo "npm $NPM_V"
+          if [ "$(printf '%s\n' 11.5.1 "$NPM_V" | sort -V | head -1)" != "11.5.1" ]; then
+            echo "::error::npm $NPM_V 太旧；Trusted Publishing 需要 npm ≥ 11.5.1。"
             exit 1
           fi
 
-      - name: 发布（只发 registry 上还没有的版本）
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: 发布（Trusted Publishing：无 token、无 secret）
         run: pnpm changeset publish
