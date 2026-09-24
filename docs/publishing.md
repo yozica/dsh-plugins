@@ -28,6 +28,16 @@ npm 在检测到**安全敏感操作**后会把账号置为只读 72 小时：**
 （2026-06-25 起对 high-impact 账号，2026-09-09 起对**所有账号**，
 [changelog](https://github.blog/changelog/2026-09-09-npm-extends-recovery-code-security-holds-to-all-accounts/)）。
 
+**本次是怎么触发的（值得记住）**：`pnpm changeset publish --otp=<一组 recovery code>`。
+注册表把 recovery code 当成了一次 **recovery-code 登录**（该码随即作废），于是立刻进入 72 小时只读冻结；
+而这条发布命令本身又因为冻结返回被掩盖的 `404`——看起来像"没有发布权限"。
+
+- **`--otp` 只接受一次性口令**：6 位 TOTP，或 web 挑战（`authUrl`/`doneUrl`）返回的 16 位口令。
+  **绝对不要拿 recovery code 当 `--otp`**：它会用掉一个恢复码，还把账号冻结 72 小时。
+- 冻结起点 = 那条命令执行的时刻。本次日志（`~/.npm/_logs/2026-09-24T10_24_01_103Z-debug-0.log` 的 argv）
+  显示触发于 **2026-09-24 18:24（北京）⇒ 2026-09-27 18:24 解冻**。
+- `--otp` 的值会被写进 npm 调试日志的 argv 和 shell history；用过的恢复码虽已作废，
+  但**剩下的恢复码仍然有效**——它们属于密码管理器，不该出现在命令行里。
 - 症状极难认：**读操作全正常**（`npm whoami`、`npm access list packages`、`npm view` 都 200，
   甚至 publish 的 2FA 挑战也会正常返回），但**所有写操作**（publish、`npm trust`、创建 token、
   改可见性）失败，且被掩盖成 `404 {"error":"Not found"}`——**不是**权限、不是 scope、不是 token 类型。
