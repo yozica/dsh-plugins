@@ -24,6 +24,9 @@ pnpm pack:all                      # 打 tarball 到 .release/（给人装 / 准
 
 ## 发布：人打标签触发，**CI 执行**
 
+> 完整路线（含首发怎么做、2FA、以及 2027-01 npm 政策的应对）见 [`docs/publishing.md`](docs/publishing.md)。
+> 一句话：**首发在本地带 OTP 发一次**（Trusted Publisher 要先有包才能配），**之后全部交给 CI 的 OIDC**，不需要任何 token。
+
 ```bash
 # ① 开发时：每个要发出去的改动带一个片段
 pnpm changeset                      # 选包 + patch/minor/major + 写一句人话
