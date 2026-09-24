@@ -1,0 +1,47 @@
+# 发布：**人打标签触发，CI 执行**。
+#
+# 为什么不是"人手动跑 pnpm publish"：CI 是可复现的干净环境（依赖锁死、顺序固定：build → test →
+# check:dist → publish），而且发布记录留在 Actions 里。人点头 = 打标签这一下。
+#
+# 标签形如 `@yozica/dsh-plugin-reveal@0.1.1`（由本地的 `pnpm changeset tag` 生成）——
+# 每个包各自版本号，所以不能用单一的 vX.Y.Z。
+#
+# 需要的一次性配置：仓库 Settings → Secrets and variables → Actions → 新增 `NPM_TOKEN`，
+# 内容是一个 npm **Automation / Granular（bypass 2FA）** token，对 `@yozica` scope 有发布权限。
+# （开了 2FA 的账号不能用普通 token 发布，这是 npm 的规矩，不是本仓的限制。）
+name: release
+
+on:
+  push:
+    tags:
+      - '**@*'
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+      - run: corepack enable
+      - run: corepack prepare pnpm@10.15.0 --activate
+      - run: pnpm install --frozen-lockfile
+
+      - name: 发布前三条硬检查
+        run: pnpm build && pnpm test:only && pnpm check:dist
+
+      - name: 检查 npm token 在不在
+        env:
+          TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          if [ -z "$TOKEN" ]; then
+            echo "::error::缺 NPM_TOKEN 这个 secret。到仓库 Settings → Secrets and variables → Actions 加一个，            内容为 npm Automation token（@yozica scope 有发布权限）。加完重新打一次标签即可。"
+            exit 1
+          fi
+
+      - name: 发布（只发 registry 上还没有的版本）
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: pnpm changeset publish

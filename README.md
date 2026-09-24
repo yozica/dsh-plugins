@@ -22,40 +22,39 @@ pnpm install:dev packages/reveal   # 把一个包 link 进 profile（开发用�
 pnpm pack:all                      # 打 tarball 到 .release/（给人装 / 准备发布）
 ```
 
-## 发布（官方源 npmjs.com）
+## 发布：人打标签触发，**CI 执行**
 
 ```bash
-# 一次性：登录官方源，并让这个 scope 走官方源（写在 ~/.npmrc，本机，不进仓）
-npm login --registry=https://registry.npmjs.org
-echo '@yozica:registry=https://registry.npmjs.org/' >> ~/.npmrc
+# ① 开发时：每个要发出去的改动带一个片段
+pnpm changeset                      # 选包 + patch/minor/major + 写一句人话
 
-# 发布（各包 publishConfig 已写死 access: public）
-pnpm -r publish --access public          # 开了 2FA 再加 --otp=<码>
-npm publish --dry-run --access public    # 发之前先试跑：只看会发什么，不真发
+# ② 想发版时：汇总版本 → 提交 → 打标签 → 推（推标签即触发 CI 发布）
+pnpm version                        # 改各包版本号、删掉已汇总的片段
+git commit -am "chore: version packages"
+pnpm changeset tag                  # 生成形如 @yozica/dsh-plugin-reveal@0.1.1 的标签
+git push --follow-tags
 ```
 
-- scoped 包默认是 restricted，`--access public` **必须**；
-- 各包的 `prepack` 会自动 `pnpm build`，所以发出去的一定是构建产物
-  （`lib/` 虽在 `.gitignore` 里，但按 `files` 会进包）；
-- **CI 不发布** —— 发布由人点头后手动跑；
-- 版本与 CHANGELOG 用 changesets（待接入，见 `docs/architecture.md` 的阶段 1 第 4 步）。
+推上去之后 `.github/workflows/release.yml` 会：干净环境 install → **build → test → check:dist**
+→ 检查 `NPM_TOKEN` → `pnpm changeset publish`（**只发 registry 上还没有的版本**，多包各自版本号）。
+
+一次性配置：仓库 Settings → Secrets and variables → Actions 新增 **`NPM_TOKEN`**，
+内容是 npm 的 **Automation / Granular（bypass 2FA）** token，对 `@yozica` scope 有发布权限 ——
+开了 2FA 的账号不能用普通 token 发布，这是 npm 的规矩。
+
+本地想先看会发什么（不真发）：
+
+```bash
+cd packages/reveal && npm publish --dry-run --access public
+```
+
+（scoped 包默认 restricted，`--access public` 必须 —— 各包 `publishConfig` 里已写死。）
 
 ## 发布前的三条硬检查
 
 ```bash
-pnpm build && pnpm -r test && pnpm check:dist    # 产物形状不对就别发
+pnpm build && pnpm test:only && pnpm check:dist    # 产物形状不对就别发（CI 里也是这三条）
 ```
-
-## 三层验证（都是命令，不靠"看起来在跑"）
-
-| 层            | 命令              | 跑的是什么                                                                                                      |
-| ------------- | ----------------- | --------------------------------------------------------------------------------------------------------------- |
-| 纯逻辑 + 契约 | `pnpm -r test`    | `src/`：地址语法、工具定义、SSE 频道、用假 ctx 断言"注册了什么"                                                 |
-| 产物形状      | `pnpm check:dist` | `lib/`：服务端导出 `name/inject/apply`；浏览器边是 loader 包装且 **host require 为空**                          |
-| 端到端        | `pnpm e2e`        | **真起 dsh + headless Chrome**：客户端半边进模块图 → 推一帧 → 右侧栏真的打开该文件（留档截图在 `.verify/e2e/`） |
-
-`pnpm e2e` 会自己把插件装进 profile（并清掉历史遗留的旧包名 —— 两个包插同一个 `id` 会让 dsh 起不来）、
-用独立端口起 dsh、跑完清进程；`--keep` 可以留着看现场，`--port` 换端口。
 
 ## 结构
 
