@@ -20,6 +20,30 @@ pnpm install:dev packages/reveal   # 把一个包 link 进 profile（开发用�
 pnpm pack:all                      # 打 tarball 到 .release/（给人装 / 准备发布）
 ```
 
+## 发布（官方源 npmjs.com）
+
+```bash
+# 一次性：登录官方源，并让这个 scope 走官方源（写在 ~/.npmrc，本机，不进仓）
+npm login --registry=https://registry.npmjs.org
+echo '@yozica:registry=https://registry.npmjs.org/' >> ~/.npmrc
+
+# 发布（各包 publishConfig 已写死 access: public）
+pnpm -r publish --access public          # 开了 2FA 再加 --otp=<码>
+npm publish --dry-run --access public    # 发之前先试跑：只看会发什么，不真发
+```
+
+- scoped 包默认是 restricted，`--access public` **必须**；
+- 各包的 `prepack` 会自动 `pnpm build`，所以发出去的一定是构建产物
+  （`lib/` 虽在 `.gitignore` 里，但按 `files` 会进包）；
+- **CI 不发布** —— 发布由人点头后手动跑；
+- 版本与 CHANGELOG 用 changesets（待接入，见 `docs/architecture.md` 的阶段 1 第 4 步）。
+
+## 发布前的三条硬检查
+
+```bash
+pnpm build && pnpm -r test && pnpm check:dist    # 产物形状不对就别发
+```
+
 ## 结构
 
 ```
