@@ -185,3 +185,55 @@ md / html 里的路径有三种写法，语义不同，必须写死规则（否�
   于是探针"什么都没发生"，排查成本很高。
 - 探针装着期间，**侧栏打开 md / html 会一直卡在「正在读取…」**（地址被我们接管、组件没画出来）。
   验完要么对齐 key，要么先撤掉 profile 里那三处改动（依赖行 / bundles 末项 / `node_modules` 符号链接）。
+
+### 补充（2026-09-25 定位）：正文是**两级槽位**，探针只注册了下一级
+
+官方 `documentpreview` 对同一种内容注册**两条**：
+
+```js
+// ① 父：声明正文槽位 + 提供数据钩子（原文在 dsh-client-ui-sidebar-documentpreview/lib/client.js）
+ctx.slots.inject(
+  'sidebar.right.pane.tab',
+  () =>
+    ctx.slots.register(
+      {
+        name: 'sidebar.right.pane.tab',
+        key: TEXTPREVIEW_ID, // 预览种类 id
+        locale: NS,
+        store,
+        children: {
+          'sidebar.right.tab.document': {
+            kind: 'keyed',
+            scope: 'session',
+            inject: { hooks: { tabInfo: documentTabInfoFactory } },
+          },
+        },
+        inject: (sessionId, actions) => ({
+          ...face(sessionId, actions),
+          hooks: { documentPreviews: source },
+        }),
+      },
+      TextPreview,
+    ),
+  '…text body',
+);
+
+// ② 子：真正画内容的组件
+ctx.slots.inject('sidebar.right.tab.document', () =>
+  ctx.slots.register(
+    {
+      name: 'sidebar.right.tab.document',
+      key: PLAIN_BODY_ID,
+    },
+    TextBody,
+  ),
+);
+```
+
+探针只做了 ②，所以：**title 生效**（走另一条路），但**父槽位没人声明** → 子槽位的 `inject`
+永不触发 → 面板没有内容（只剩「正在读取…」）。
+
+**下一步就一个问题**：父槽位的 `key`（官方是 `TEXTPREVIEW_ID` 这种"预览种类"）**怎么从 claim 传到父槽位**
+—— 而 `documentPreviews` 里的 body 定义是按扩展名注册的（`MARKDOWN_BODY_ID` 等）。
+读 `documentTabInfoFactory` 与 registry 的 snapshot 即可定；定完按"父 + 子"两级重写探针，
+重建 → 重启 dsh → 看日志有没有 `[paths-probe] body invoked`。
