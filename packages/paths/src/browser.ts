@@ -21,19 +21,21 @@
  *
  * 所以规矩是：**`inject` 只放"没有它就完全没意义"的服务**（`documentPreviews` / `slots`，
  * 探针已经证明这两个在本插件的 fiber 里一定拿得到），其余一律走 `src/services.ts` 的
- * `serviceOf()`（内部是 `ctx.reflect.get(name, false)` 非严格读取）—— 拿不到返回 `undefined`，
- * 不抛、也不影响 fiber 激活。**永远不要直接写 `ctx.xxx`**。
+ * `serviceOf()` —— 它先试 **`ctx.get(name)`**（cordis 官方推荐、社区踩坑后的标准修法），
+ * 再退到 `ctx.reflect.get(name, false)`。拿不到返回 `undefined`，不抛、也不影响 fiber 激活。
+ * **永远不要直接写 `ctx.xxx`。**
  *
  * @module @yozica/dsh-plugin-paths/browser
  */
 import { parseSessionFileAddress } from '@yozica/dsh-plugin-kit/client';
-import { createElement, useEffect, useRef, useState } from 'react';
+import * as React from 'react';
 
 import type { PathsContext } from './host.js';
 import { decodeBase64, decodeUtf8, type ReadRelated } from './html.js';
 import type { PathTarget } from './paths.js';
 import { registerBodies, type PathOrigin } from './plug.js';
-import { serviceOf } from './services.js';
+import { missingReact, serviceOf } from './services.js';
+import { STRINGS } from './strings.js';
 import { ensureStyles } from './styles.js';
 import { openFileTarget } from './target.js';
 
@@ -41,6 +43,59 @@ export const name = 'plugin-paths';
 
 /** 只有这两个是硬依赖：没有它们，注册 body / 组件这件事根本无从谈起。 */
 export const inject = ['documentPreviews', 'slots'];
+
+/**
+ * 我们自己的错误边界 —— **在工厂里定义，不在模块作用域**。
+ *
+ * 为什么必须有：**我们返回的树一旦在 React 渲染/提交期抛错，React 会卸载整棵子树**，
+ * 用户看到一片空白 —— 而 `dshmarket` 的 #293 正是这么白屏了好几个月（浏览器翻译改写了
+ * React 的文本节点，下一次更新就抛 `NotFoundError`）。有边界至少能退回显示原文。
+ *
+ * 为什么在工厂里：`class X extends React.Component` 是在**模块求值时**执行的。宿主 react 若缺
+ * `Component`（旧宿主 / 半成品），模块直接就挂 —— 那时连 `apply` 里的能力自检都跑不到，
+ * 也就谈不上"干净降级"（`check-dist` 用假 `require` 正是这么把这个坑抓出来的）。
+ */
+function createGuard(
+  react: Record<string, unknown>,
+): (child: unknown, fallback: unknown) => unknown {
+  const Component = react['Component'] as new () => {
+    props: { children?: unknown; fallback?: unknown };
+    state: { error: Error | null };
+    render(): unknown;
+  };
+  const createElement = react['createElement'] as (
+    type: unknown,
+    props?: unknown,
+    ...children: unknown[]
+  ) => unknown;
+
+  class PathsBoundary extends Component {
+    state: { error: Error | null } = { error: null };
+
+    static getDerivedStateFromError(error: Error): { error: Error } {
+      return { error };
+    }
+
+    componentDidCatch(error: Error, info?: { componentStack?: string | null }): void {
+      try {
+        document.documentElement.setAttribute('data-dsh-paths-crashed', error.message);
+      } catch {
+        /* 标记失败无所谓 */
+      }
+      console.error('[dsh-plugin-paths] 渲染崩溃，已退回显示原文', error, info?.componentStack);
+    }
+
+    render(): unknown {
+      if (this.state.error === null) return this.props.children;
+      return createElement('div', { 'data-dsh-paths-crashed': true }, [
+        createElement('p', { key: 'note', className: 'dsh-paths-status' }, STRINGS.renderCrash),
+        this.props.fallback,
+      ]);
+    }
+  }
+
+  return (child, fallback) => createElement(PathsBoundary, { fallback }, child);
+}
 
 /**
  * 挂载/点击出错时**别静默**：右下角一条红条，同时给 `<html>` 打一个 `data-dsh-paths-failed`。
@@ -61,7 +116,7 @@ function reportFailure(error: unknown): void {
     node.style.cssText =
       'position:fixed;right:8px;bottom:8px;z-index:2147483647;font:11px/1.5 ui-monospace,monospace;' +
       'padding:4px 8px;border-radius:6px;max-width:60vw;white-space:pre-wrap;background:#c0392b;color:#fff';
-    node.textContent = `[paths] 出错（正文交回官方渲染）：${message}`;
+    node.textContent = STRINGS.mountFailed(message);
     host.appendChild(node);
   } catch {
     /* 兜底本身不该抛 */
@@ -111,9 +166,21 @@ export function apply(ctx: PathsContext): void {
   // 挂载失败**不许**拖垮界面：宿主会把 apply 抛错渲染成整页 "Failed to load plugins"，
   // 而我们失败时正文交回官方 body 就行（少一个能力，不是坏一个页面）。
   try {
+    // 先自检宿主能力（对齐 dshmarket 的 missingPrimitives）：缺了就干净跳过，
+    // 而不是注册一个渲染时才炸的 body。
+    const gaps = missingReact(React as unknown as Record<string, unknown>);
+    if (gaps.length > 0) {
+      ctx.logger?.warn(`${STRINGS.missingReact}${gaps.join(', ')}`);
+      return;
+    }
     registerBodies(ctx, {
-      h: createElement,
-      hooks: { useState, useEffect, useRef },
+      h: React.createElement,
+      hooks: {
+        useState: React.useState,
+        useEffect: React.useEffect,
+        useRef: React.useRef,
+        useMemo: React.useMemo,
+      },
       readRelated: createReadRelated(ctx),
       onOpenPath: (target, origin) => {
         // 点击里的异常别变成"点了没反应"：冒到红条上，一次就能看见
@@ -122,11 +189,13 @@ export function apply(ctx: PathsContext): void {
       onExternal: (url) => {
         openExternal(ctx, url);
       },
+      // 边界在能力自检**之后**才构造（见 createGuard 的注释）
+      guard: createGuard(React as unknown as Record<string, unknown>),
     });
     ensureStyles();
   } catch (error) {
     reportFailure(error);
-    ctx.logger?.warn('[dsh-plugin-paths] 客户端半边挂载失败，md / html 交回官方渲染：', error);
+    ctx.logger?.warn(STRINGS.mountFailedLog, error);
   }
 }
 
@@ -136,7 +205,7 @@ function createReadRelated(ctx: PathsContext): ReadRelated | undefined {
   if (workspaceFiles === undefined) return undefined;
   return async (address, relativePath, signal) => {
     const reference = parseSessionFileAddress(address);
-    if (reference === null) throw new Error('不是 session 文件地址');
+    if (reference === null) throw new Error(STRINGS.badAddress);
     const result = await workspaceFiles.readRelated(
       reference.sessionId,
       reference.path,
@@ -174,17 +243,14 @@ async function openTarget(
 ): Promise<void> {
   const sidebar = sidebarRightOf(ctx);
   if (sidebar === undefined) {
-    ctx.logger?.warn('[dsh-plugin-paths] 这个界面没有 sidebarRight 服务，路径点了打不开。');
+    ctx.logger?.warn(STRINGS.noSidebarService);
     return;
   }
   const address = origin.resourceAddress;
   const reference =
     typeof address === 'string' && address !== '' ? parseSessionFileAddress(address) : null;
   if (reference === null) {
-    ctx.logger?.warn(
-      '[dsh-plugin-paths] 当前正文不是 session 文件地址，解析不了相对路径：',
-      address,
-    );
+    ctx.logger?.warn(STRINGS.notSessionAddress, address);
     return;
   }
   await openFileTarget(

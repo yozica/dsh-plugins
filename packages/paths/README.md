@@ -61,8 +61,10 @@
 - 嵌套列表只做一层；表格只支持基本 `|` 语法（不支持对齐/单元格内换行）；
 - **路径只从两处识别**：行内代码、指向路径的 Markdown 链接。正文里的"裸路径词"不识别
   （`a.com`、`and/or` 这类误报代价太高）；
-- 行内代码里的**路径不能带空格**（`src/my file.ts` 不认）；裸文件名（`a.ts`）也不认，
-  但 Markdown 链接里认（链接语法本身就是明确意图）；
+- 行内代码里的**路径不能带空格**（`src/my file.ts` 不认，已知限制）；
+- **裸文件名**（无目录）只在扩展名进**白名单**时认：`index.ts`、`paths-demo.html` 认，
+  `process.env` / `console.log` / `React.Component` / `1.5` 不认（白名单见 `src/paths.ts` 的
+  `BARE_FILE_EXTENSIONS`）。带目录的写法（`src/whatever.env`）则宽松；Markdown 链接里一律按意图认。
 - 分页读（`text-pages`）下，未闭合的围栏按"后面都是代码"处理。
 
 **HTML**（`src/bridge.ts` + `src/html.ts`）：
@@ -75,8 +77,8 @@
 
 **其它**：
 
-- client 半边 `require('react')`（宿主提供，见 `dsh.client.hostRequires`）；
-  `scripts/check-dist.mjs` 会按包校验"向宿主要了哪些包"，没声明就报错；
+- client 半边 `require('react')`：它在**宿主的静态模块表**里（壳启动时 seed），无需声明；
+  `scripts/check-dist.mjs` 校验客户端产物只 require 静态模块表里的名字或 `dsh.client.external` 里声明过的；
 - body 渲染异常时退回显示原文，**不让白屏**；我们没认领的地址（非 md/html）官方 body 照常生效。
 
 ## 出问题了怎么查（这台机器上 console 不可信）
@@ -100,6 +102,24 @@
 4. **写代码时的三条铁律**（真机踩过，改代码前先看 `src/browser.ts` 顶部注释）：
    `inject` 只放真硬依赖；其余服务一律用 `src/services.ts` 的 `serviceOf()` 非严格读取；
    **永远不要直接写 `ctx.xxx`**（未声明的读一下就抛；声明了但拿不到会让 `apply` 静默不执行）。
+
+## 参考（"优秀插件怎么做"）
+
+- 官方文档站：<https://deepseek-harness.github.io/deepseek-harness/develop/basic/>
+  （子系统页：[client-modules](https://deepseek-harness.github.io/deepseek-harness/reference/subsystems/client-modules)、`sidebar-right`、`ui-slots`、`ui-primitives`）
+- 社区指南与索引：[PerryLink/dsh-plugin-guide](https://github.com/PerryLink/dsh-plugin-guide)、[awesome-dsh-plugin](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin)
+- 同方向插件：[DSH-better-sidebar](https://github.com/omdsh-dev/DSH-better-sidebar)（侧栏 tab + markdown/html 预览，**复用宿主 `MarkdownText`**）
+- inject 的坑（社区实测）：[dsh-ego-browser#29](https://github.com/Fisfzy/dsh-ego-browser/issues/29)、[better-sidebar#357](https://github.com/omdsh-dev/DSH-better-sidebar/pull/357)
+- 最好的"怎么写"样本是本机装的 **`dshmarket`**：它连 `src/` 都发，
+  `src/client/{index.ts,ErrorBoundary.tsx,self-check.ts,primitives.d.ts}` 值得逐个读。
+
+### 我们与官方 `MarkdownText` 的分工（有意为之）
+
+官方 `MarkdownText` 只给**行内代码**留了"文件提及"钩子（`fileMentions.resolve` → `{title,label,open}`），
+**相对路径的链接被它判成空 URL → 渲染成纯文本**（壳产物里的 `u8` / `C8`）。
+「链接指向路径也要能点」是本包的需求之一，所以 Markdown 这边我们自研薄渲染器；
+代价（缩进代码块/任务列表/脚注/公式/代码复制按钮等）见上面的「已知降级」。
+**如果哪天只要求行内代码可点，就该整体换成官方 `MarkdownText`** —— 能白拿完整 GFM。
 
 ## 安装（本地开发）
 

@@ -67,10 +67,13 @@ test('点击路径走 onOpenPath（行内代码 vs 链接两种来源）', () =>
   assert.deepEqual(link.opened, [[{ path: 'docs/b.md' }, 'link']]);
 });
 
-test('指路径的 Markdown 链接渲染成可点的 <a>，href 是 #（不给页面跳走的机会）', () => {
+test('指路径的 Markdown 链接渲染成可点的 <a>，但**没有 href**', () => {
   const { tree } = render('[说明](docs/b.md)');
   const anchor = findAll(tree, (element) => element.type === 'a')[0] as Element;
-  assert.equal(anchor.props.href, '#');
+  // 没有 href：cmd/中键点击不会触发 window-open，壳就不会把应用自身 URL 丢给系统浏览器
+  assert.equal(anchor.props.href, undefined);
+  assert.equal(anchor.props.role, 'link');
+  assert.equal(anchor.props.tabIndex, 0);
   assert.equal(anchor.props['data-dsh-paths-kind'], 'link');
   assert.equal(anchor.props['data-dsh-paths-target'], 'docs/b.md');
 });

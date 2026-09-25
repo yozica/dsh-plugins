@@ -115,7 +115,8 @@ window.__ModuleLoader__.load({ id: "dshmarket", factory: (require) => {
 
 1. ✅ `scripts/build-client.mjs`：`react` / `react-dom` / `react/jsx-runtime` 进 external。
 2. ✅ 新包 `packages/paths/`：
-   - `package.json`：`dsh.bundle.patch` → `./cordis.patch.yml`；`dsh.client { platform, inject, hostRequires: ['react'] }`；
+   - `package.json`：`dsh.bundle.patch` → `./cordis.patch.yml`；`dsh.client { platform, inject }`
+     （**不需要**声明 `react`：它在宿主的静态模块表里，见「host require 到底怎么判」）；
      `files` 含 `lib` + patch + README。
    - `cordis.patch.yml`：`- insert: [{ id: paths, name: '@yozica/dsh-plugin-paths' }]`。
    - `src/index.ts`：server 半边最小实现（`name` / `inject` / `apply`），只为让 bundle 能被装配。
@@ -139,7 +140,7 @@ window.__ModuleLoader__.load({ id: "dshmarket", factory: (require) => {
    - `bridge.test.ts` 用 `node:vm` 校验生成的引导脚本**语法正确**（`</script>` 转义没写坏）；
    - `target.test.ts` 候选顺序 / 行号透传 / 探测抛错降级；
    - `services.test.ts` 非严格读服务（含"假 ctx 里一个读属性就抛的代理"）；
-   - `check-dist`：`dsh.client.hostRequires` 白名单，未声明的主机依赖直接报错。
+   - `check-dist`：客户端产物的 host require 必须落在宿主**静态模块表**里（或写进 `dsh.client.external`）。
    - ⏳ e2e（真 dsh + 无头 Chrome）还没做；当前靠 `docs/fixtures/paths-demo.*` 手动验收。
 6. ✅ 真机：`link:` 进 `~/.dsh/profiles/web` → 重启 dsh → `reveal` 打开 `docs/fixtures/paths-demo.md` 点一遍
    （2026-09-25 逐条跑通，见文末）。
@@ -167,7 +168,8 @@ md / html 里的路径有三种写法，语义不同，必须写死规则（否�
 ## 未决 / 风险
 
 - ✅ **已解决（2026-09-25 真机）**：子槽位 `key` = 我们 body 定义的 id；父槽位 `sidebar.right.pane.tab` 由官方包按 **tab 种类**全局注册，**不需要也不该由我们参与**；第一版卡住的真原因是定义漏了 `loading`。见文末「探针实测结论」。
-- ✅ **已解决**：`check-dist` 现在按包校验 host require（`dsh.client.hostRequires` 白名单）：纯 ctx 包必须为空，UI 包把 `react` 写出来。
+- ✅ **已解决**：`check-dist` 现在按**宿主真实机制**校验 host require（静态模块表 ∪ `dsh.client.external`）。
+  注：我原先自造的 `dsh.client.hostRequires` 字段在官方文档/代码里**不存在**，已删除（见文末审计）。
 - ⚠️ **降级要接受**：接管后官方 Markdown 的进阶渲染（任务列表 / 脚注 / 缩进代码 / HTML 块）与部分 HTML 资源形态不再支持 ——
   清单在 [`packages/paths/README.md`](../packages/paths/README.md) 的「已知降级」，改动前先看。
 - ⚠️ 依赖宿主 `react` 与 `documentPreviews` / `slots` / `remote.workspaceFiles` 的形状，会随上游变动；
@@ -306,3 +308,58 @@ content !== void 0 && renderSlot('sidebar.right.tab.document',
 5. **`console.log` 不是取证手段**（见「坑 ②」）。所以正式实现里保留了
    **失败才会出现**的兜底：右下角一条红条 + `<html data-dsh-paths-failed>`；
    成功时界面干干净净。静默失败才是最贵的故障。
+
+## 审计：优秀插件怎么做，我们改了什么（2026-09-25）
+
+看了三类样本，都是本机可核对的东西：
+
+| 样本                                                          | 看什么                                                                            |
+| ------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| `dshmarket`（真实第三方 UI 插件，**连 `src/` 都发了**）       | `src/client/index.ts` / `ErrorBoundary.tsx` / `self-check.ts` / `primitives.d.ts` |
+| 官方壳里的 `MarkdownText`（`dsh-web-frontend` 产物里的 `w8`） | 渲染策略、`fileMentions` 钩子、链接放行规则                                       |
+| 官方教学文档（`dsh-cordis-client-runner` 的 API 文档文本）    | `ctx.get` vs `inject` 的取舍、`slots.register` 字段语义                           |
+| 公开资料（见 README「参考」一节的链接）                       | 官方文档站、社区指南、别人的 inject 踩坑记录                                      |
+
+### 结论：官方 `MarkdownText` 的路径能力只有一半
+
+```js
+// 行内代码：官方**留了钩子**
+case "inlineCode": {
+  const c = i.inLink === true ? undefined : i.fileMentions?.resolve(s);
+  return c !== undefined
+    ? <code><button type="button" className={lt.fileMention} title={c.title} onClick={c.open}>
+        <LinkIcon kind={W6(s)}/>{s}</button></code>
+    : <code>{s}</code>;
+}
+// 链接：相对路径被 `u8` 判死 → 渲染成纯文本（`C8` 返回 <>{children}</>）
+function u8(t){ try { switch(new URL(t).protocol){
+  case"http:": case"https:": case"mailto:": return t; default: return "" } } catch { return "" } }
+```
+
+所以「换成官方 `MarkdownText` + `fileMentions`」只能覆盖**行内代码里的路径**，
+`[说明](docs/a.md)` 这类**指路径的链接会退回纯文本** —— 而那是这条线的明确需求。
+**这就是我们保留自研薄渲染器的唯一理由**（代价见 `packages/paths/README.md#已知降级`）；
+哪天只需要行内代码可点，就该切成官方 `MarkdownText`，能白拿 GFM/脚注/公式/代码复制按钮。
+
+### 据此改的 9 处
+
+| #   | 问题（谁教的）                                                                                                            | 改法                                                                                                                                                                                                           |
+| --- | ------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | **每次滚动都在重解析整篇 Markdown**（官方是 `React.memo` + `useMemo`）                                                    | Markdown body 用 `useMemo`，同正文只解析一次                                                                                                                                                                   |
+| 2   | **没有错误边界**：渲染期抛错 → React 卸载整棵子树 → 白屏（`dshmarket` #293 白屏了几个月）                                 | 加 `PathsBoundary`，崩了显示原文；**工厂里定义**，模块求值不碰 `React.Component`                                                                                                                               |
+| 3   | 路径链接用了 `href="#"`：cmd/中键点击会让壳把**应用自身 URL** 交给系统浏览器                                              | 去掉 `href`（官方文件提及也是无 `href` 的 `<button>`）                                                                                                                                                         |
+| 4   | **文案硬编码**散在 4 个文件（`dshmarket` 一句都不硬编码）                                                                 | 集中到 `src/strings.ts`；将来接 `ctx.locale` 只改这个文件                                                                                                                                                      |
+| 5   | 宿主 react 缺导出会在**渲染时**炸                                                                                         | `apply` 先做能力自检（`missingReact`，对齐 `dshmarket` 的 `missingPrimitives`），缺就干净降级                                                                                                                  |
+| 6   | `slots.register` 返回值未必是 disposer（`dshmarket` 有兜底）                                                              | `asDisposer()` 收敛后再交给 `ctx.effect`                                                                                                                                                                       |
+| 7   | 可选服务读法是我自创的 `reflect.get(name,false)`                                                                          | 首选官方推荐的 **`ctx.get(name)`**（社区同款修法：静态 inject 塞可选服务会把整个 client boot 挂死）                                                                                                            |
+| 8   | 自造的 `dsh.client.hostRequires` 字段**在公开文档/代码里不存在**                                                          | 删掉；`check-dist` 改成按**宿主真实机制**判：静态模块表 ∪ `dsh.client.external`                                                                                                                                |
+| 9   | **裸文件名一律不认**，于是 `` `paths-demo.html` `` 点不动 —— 而**我们自己写的验收夹却把它列成"应该可点"**（真机一测就露） | 行内代码的裸文件名改成按**已知扩展名白名单**认：`index.ts` / `plug.ts:30` / `paths-demo.html` 认；`process.env` / `console.log` / `React.Component` / `1.5` 仍不认（`src/paths.ts` 的 `BARE_FILE_EXTENSIONS`） |
+
+### 顺带确认的两件事
+
+- `dsh-client-ui-primitives` 在本机不是独立安装包，而是**壳的静态模块**（`dsh-web-frontend` 的
+  `staticModules` 表里：`react` / `react-dom` / `cordis` / `client-store` / `ui-slots` /
+  `ui-primitives` / `ui-dockkit`）。所以 UI 插件 `require('react')` 不需要任何声明。
+- 社区实测记录与我们踩的坑一致：**静态 `inject` 里放一个拿不到的服务会让整个客户端半边
+  静默不激活**（ego-browser #29 / better-sidebar #357），修法就是 `ctx.get` 探测 +
+  服务出现后再 `ctx.inject()` 升级。

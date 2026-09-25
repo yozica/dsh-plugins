@@ -6,6 +6,7 @@
  */
 import { parseMarkdown, type Block, type Inline } from './markdown.js';
 import { classifyHref, classifyPathToken, type PathTarget } from './paths.js';
+import { STRINGS } from './strings.js';
 
 /** `createElement` 的最小形状 */
 export type H = (
@@ -148,8 +149,14 @@ function renderInline(nodes: readonly Inline[], deps: ViewDeps, keyPrefix: strin
 /**
  * 一个可点的路径元素。
  *
- * 行内代码渲染成 `<code role="link">`，链接渲染成 `<a href="#">`（`#` 只为可聚焦/可右键，
- * 点击一律 `preventDefault` 走侧栏）。`data-dsh-paths-*` 给 e2e 与真机核对用。
+ * 行内代码渲染成 `<code role="link" tabindex="0">`，指向路径的链接渲染成**没有 `href`** 的 `<a>`
+ * （`role="link"` + `tabindex` + 键盘 Enter/Space；点击一律走侧栏）。
+ *
+ * 为什么不给 `<a>` 一个 `href="#"`：没有 `href` 时 cmd/中键点击不会触发"新窗口"请求 ——
+ * 有 `href` 的话壳的 window-open 处理器会把 `#` 解析成应用自身 URL 并用**系统浏览器**打开，
+ * 用户会莫名其妙多出一个标签页。官方渲染器的文件提及也是个 `<button>`，同样没有 `href`。
+ *
+ * `data-dsh-paths-*` 给 e2e 与真机核对用。
  */
 function pathElement(
   deps: ViewDeps,
@@ -171,15 +178,15 @@ function pathElement(
   const props: Record<string, unknown> = {
     key,
     className: 'dsh-paths-target',
+    role: 'link',
+    tabIndex: 0,
     'data-dsh-paths-kind': source,
     'data-dsh-paths-target': target.path,
-    title: `在侧栏打开 ${target.path}${target.line === undefined ? '' : `:${target.line}`}`,
+    title: STRINGS.openPathTitle(target.path, target.line),
     onClick: open,
     onKeyDown,
   };
   if (target.line !== undefined) props['data-dsh-paths-line'] = target.line;
-  if (source === 'code') {
-    return deps.h('code', { ...props, role: 'link', tabIndex: 0 }, children);
-  }
-  return deps.h('a', { ...props, href: '#', role: 'link' }, children);
+  if (source === 'code') return deps.h('code', props, children);
+  return deps.h('a', props, children);
 }

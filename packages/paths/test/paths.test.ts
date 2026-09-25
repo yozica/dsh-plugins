@@ -20,7 +20,17 @@ test('行内代码：相对路径要带扩展名（避免 `and/or`、`a.ts` 误�
   assert.deepEqual(classifyPathToken('C:\\proj\\a.ts'), { path: 'C:/proj/a.ts' });
   assert.deepEqual(classifyPathToken('docs/guide.md'), { path: 'docs/guide.md' });
 
-  assert.equal(classifyPathToken('a.ts'), null, '裸文件名不当路径（行内代码里太容易误报）');
+  // 裸文件名：扩展名在白名单里就认（`index.ts:30` 很常见），不在就拒（防 process.env 这类）
+  assert.deepEqual(classifyPathToken('a.ts'), { path: 'a.ts' });
+  assert.deepEqual(classifyPathToken('paths-demo.html'), { path: 'paths-demo.html' });
+  assert.deepEqual(classifyPathToken('plug.ts:30'), { path: 'plug.ts', line: 30 });
+  assert.equal(classifyPathToken('process.env'), null, '属性名不是路径');
+  assert.equal(classifyPathToken('console.log'), null);
+  assert.equal(classifyPathToken('React.Component'), null);
+  assert.equal(classifyPathToken('Math.max'), null);
+  assert.equal(classifyPathToken('1.5'), null);
+  assert.equal(classifyPathToken('arr.map'), null);
+  assert.equal(classifyPathToken('this.key'), null);
   assert.equal(classifyPathToken('docs/guide'), null, '没有扩展名的相对路径不认');
   assert.equal(classifyPathToken('const x = 1'), null);
   assert.equal(classifyPathToken('and/or'), null);

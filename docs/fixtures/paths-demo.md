@@ -4,8 +4,9 @@
 
 ## 1. 行内代码：相对本文件所在目录
 
-- `paths-demo.html` —— 同目录 HTML，点了右侧栏应出现预览（样式生效 + 里面也能点）
+- `paths-demo.html` —— **裸文件名**（无目录）也认（扩展名在白名单里），点了右侧栏应出现预览
 - `./paths-demo.css` —— 带 `./` 的写法，同样该可点
+- `paths-demo.css:2` —— 裸文件名 + 行号也认
 
 ## 2. 行内代码：相对工作区根（先按本文件目录找，找不到再按工作区根）
 
@@ -27,10 +28,14 @@ dsh-plugins/packages/paths/src/browser.ts:1
 
 ## 5. 行内代码但**不是**路径（不该可点）
 
+裸文件名只在**扩展名进白名单**时才算路径，所以下面这些都不该可点：
+
 - `const x = 1`
 - `and/or`
-- `a.ts`（裸文件名：行内代码不认，链接才认）
+- `process.env`、`console.log`、`React.Component`、`Math.max`、`arr.map`（属性名，不是文件）
+- `1.5`、`v1.2.3`（数字，不是扩展名）
 - `https://example.com/x.md`（是网页不是文件路径）
+- `src/my file.ts`（带空格的路径仍不认，见 README 已知降级）
 
 ## 6. 打不开的路径
 

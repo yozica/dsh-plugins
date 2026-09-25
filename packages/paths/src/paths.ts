@@ -39,6 +39,161 @@ const SCHEME = /^[a-z][a-z\d+.-]*:/i;
 const EXTERNAL_SCHEME = /^(?:https?|mailto|tel|ftp|ftps):/i;
 /** 结尾看起来像扩展名 */
 const EXTENSION = /\.[A-Za-z0-9]{1,8}$/;
+
+/**
+ * **没有目录的裸文件名**能认的扩展名白名单。
+ *
+ * 为什么不用"任何扩展名"：那样 `process.env`、`console.log`、`React.Component`、`1.5`
+ * 通通会变成可点路径。反过来，只认带 `/` 的写法又会漏掉最常见的 `` `index.ts:30` ``。
+ * 所以折中：**裸文件名要求扩展名在白名单里**，带目录的（含 `/`）照旧宽松。
+ * 名单里刻意**不收** `env` / `log` / `map` / `key` / `text` / `name` 这些常见的属性名。
+ */
+const BARE_FILE_EXTENSIONS = new Set([
+  // 代码
+  'ts',
+  'tsx',
+  'mts',
+  'cts',
+  'js',
+  'jsx',
+  'mjs',
+  'cjs',
+  'json',
+  'json5',
+  'jsonc',
+  'py',
+  'pyi',
+  'rb',
+  'go',
+  'rs',
+  'java',
+  'kt',
+  'kts',
+  'scala',
+  'swift',
+  'm',
+  'mm',
+  'c',
+  'h',
+  'cc',
+  'cpp',
+  'cxx',
+  'hh',
+  'hpp',
+  'cs',
+  'fs',
+  'fsx',
+  'php',
+  'pl',
+  'pm',
+  'lua',
+  'r',
+  'jl',
+  'dart',
+  'ex',
+  'exs',
+  'erl',
+  'hrl',
+  'clj',
+  'cljs',
+  'v',
+  'zig',
+  'nim',
+  // 文档 / 标记
+  'md',
+  'mdx',
+  'markdown',
+  'rst',
+  'adoc',
+  'html',
+  'htm',
+  'xhtml',
+  'vue',
+  'svelte',
+  'astro',
+  'txt',
+  'pdf',
+  'epub',
+  // 样式 / 配置
+  'css',
+  'scss',
+  'sass',
+  'less',
+  'styl',
+  'yml',
+  'yaml',
+  'toml',
+  'ini',
+  'cfg',
+  'conf',
+  'properties',
+  'xml',
+  'plist',
+  'lock',
+  'patch',
+  'diff',
+  // 脚本
+  'sh',
+  'bash',
+  'zsh',
+  'fish',
+  'ps1',
+  'bat',
+  'cmd',
+  'vbs',
+  // 数据 / 查询
+  'sql',
+  'graphql',
+  'gql',
+  'proto',
+  'thrift',
+  'csv',
+  'tsv',
+  'xls',
+  'xlsx',
+  'parquet',
+  'ipynb',
+  'sqlite',
+  'db',
+  'doc',
+  'docx',
+  'ppt',
+  'pptx',
+  'odt',
+  // 图片 / 媒体 / 压缩包
+  'png',
+  'jpg',
+  'jpeg',
+  'gif',
+  'webp',
+  'avif',
+  'ico',
+  'bmp',
+  'tiff',
+  'psd',
+  'mp3',
+  'wav',
+  'mp4',
+  'mov',
+  'webm',
+  'zip',
+  'tar',
+  'gz',
+  'tgz',
+  'bz2',
+  'xz',
+  '7z',
+  'rar',
+]);
+
+/** 取最后一个点后面的扩展名（小写）；没有 / 点开头 / 点结尾都算没有扩展名 */
+function extensionOf(candidate: string): string {
+  const slash = candidate.lastIndexOf('/');
+  const name = slash < 0 ? candidate : candidate.slice(slash + 1);
+  const dot = name.lastIndexOf('.');
+  if (dot <= 0 || dot === name.length - 1) return '';
+  return name.slice(dot + 1).toLowerCase();
+}
 /** 太长的"路径"多半不是路径（防止把一整段话变链接） */
 const MAX_LENGTH = 400;
 
@@ -96,7 +251,10 @@ export function classifyPathToken(value: string): PathTarget | null {
     candidate.startsWith('../') ||
     isWindowsStylePath(candidate) ||
     candidate.startsWith('/') ||
-    (candidate.includes('/') && EXTENSION.test(candidate));
+    // 有目录：扩展名宽松（`src/whatever.env` 也认——有 `/` 基本就是路径了）
+    (candidate.includes('/') && EXTENSION.test(candidate)) ||
+    // 裸文件名：扩展名要在白名单里（`index.ts` 认，`process.env` / `console.log` 不认）
+    BARE_FILE_EXTENSIONS.has(extensionOf(candidate));
   if (!shaped) return null;
   return target;
 }
