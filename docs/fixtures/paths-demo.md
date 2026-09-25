@@ -16,7 +16,9 @@
 ## 3. Markdown 链接
 
 - [指路径的链接（上一级目录）](../panel-path-links.md) —— 浏览器地址栏不该跳走，右侧栏换内容
-- [指路径的链接（同目录）](paths-demo.md)
+- [指路径的链接（同目录）](paths-demo.md) —— **点了界面不变是预期**：地址与当前面板同一个 tab，
+  侧栏只会聚焦已打开的那个 tab（侧栏按 `contentId` 去重）
+- [指路径的链接（同目录的另一个文件）](paths-demo.html) —— 这个换了地址，右侧栏应该换内容
 - [外链：example.com](https://example.com/) —— 应该交给系统浏览器
 - 自动链接：<https://example.com/>
 
