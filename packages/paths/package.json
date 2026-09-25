@@ -1,0 +1,52 @@
+{
+  "name": "@yozica/dsh-plugin-paths",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "让侧栏里看到的东西可点：Markdown / HTML 里的文件路径与链接（网页交给浏览器，文件在侧栏打开）",
+  "main": "lib/index.js",
+  "exports": {
+    ".": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./client": {
+      "default": "./lib/client.js"
+    }
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-sidebar-documentpreview",
+        "@deepseek-ai/dsh-client-ui-slots",
+        "@deepseek-ai/dsh-client-ui-sidebar-right"
+      ]
+    }
+  },
+  "files": [
+    "lib",
+    "cordis.patch.yml",
+    "README.md"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yozica/dsh-plugins.git",
+    "directory": "packages/paths"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json && node ../../scripts/build-client.mjs .",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "node --import tsx --test test/*.test.ts",
+    "prepack": "pnpm build"
+  },
+  "dependencies": {
+    "@yozica/dsh-plugin-kit": "workspace:*"
+  }
+}

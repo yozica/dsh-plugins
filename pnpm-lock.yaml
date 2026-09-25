@@ -28,6 +28,12 @@ importers:
 
   packages/kit: {}
 
+  packages/paths:
+    dependencies:
+      '@yozica/dsh-plugin-kit':
+        specifier: workspace:*
+        version: link:../kit
+
   packages/reveal:
     dependencies:
       '@yozica/dsh-plugin-kit':
