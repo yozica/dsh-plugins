@@ -44,8 +44,17 @@ const result = await build({
   target: 'es2022',
   legalComments: 'none',
   logLevel: 'warning',
-  // 宿主提供的客户端包由 loader 的 require 提供，不打进来
-  external: ['@deepseek-ai/*'],
+  // 宿主提供的客户端包由 loader 的 require 提供，不打进来。`react` 一族同样是宿主提供
+  // （社区 UI 插件就是这么拿的：dshmarket/client/client.js 里 require("react")／("react-dom")／
+  //  ("@deepseek-ai/dsh-client-ui-primitives")）；只有真要画组件的包才会 require 到它们。
+  external: [
+    '@deepseek-ai/*',
+    'react',
+    'react-dom',
+    'react-dom/client',
+    'react/jsx-runtime',
+    'react/jsx-dev-runtime',
+  ],
 });
 const code = result.outputFiles[0].text;
 const outFile = path.join(packageDir, 'lib', 'client.js');
