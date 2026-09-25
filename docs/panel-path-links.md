@@ -10,7 +10,14 @@
 | 侧栏里 **裸路径**（`` `src/a.ts` ``）、**指路径的 Markdown 链接** | ❌ 渲染成普通文本，"本身就是文本"                                                                                                              |
 | 侧栏里 **HTML 预览**中的任何链接                                  | ❌ 点不动 —— 官方用 `sandbox="allow-scripts"` 的 iframe（无 `allow-popups`），点击在 iframe 内就被丢掉，**外壳收不到、我们救不了，也不该去改** |
 
-所以本文件要解决的范围只有一条：**让面板内容里的文件路径可点**（点了在侧栏打开对应文件）。
+所以本文件的范围是**两条**，都落在新包 `@yozica/dsh-plugin-paths` 里；`@yozica/dsh-plugin-reveal`
+**只保留"agent 主动把东西摊到侧栏"这一个能力，不动**：
+
+| 内容类型                     | 谁渲染                               | 要解决的问题                 |
+| ---------------------------- | ------------------------------------ | ---------------------------- |
+| **Markdown**                 | 我们接管官方 `md` body（React 组件） | 裸路径 / 指路径的链接 → 可点 |
+| **HTML**                     | 我们自己的 iframe + 桥脚本（见下）   | 内容里的 `<a>` 与路径 → 可点 |
+| 其它（图片 / PDF / 纯文本…） | 官方 body 原样                       | 不改                         |
 
 ## 官方机制（读契约 + `dsh-client-ui-sidebar-documentpreview` 源码得到）
 
@@ -62,6 +69,28 @@ ctx.sidebarRightTabs.register({ id, kind, patterns?, canOpen?, priority: 'extens
 
 排序规则（`tab-registry.d.ts`）：band（fallback < builtin < extension）→ 匹配到的 pattern 长度 → 注册顺序；`canOpen` 是否决权。`contentId` 就是地址本身（同一地址重复打开是同一个 tab）。
 
+## HTML 预览怎么做（我们自己的 iframe + 桥脚本）
+
+官方 html body 是 `sandbox="allow-scripts"` 的 iframe（无 `allow-popups`），而且内容是别人画的、
+我们注入不了脚本 —— 所以**只能接管**：`extensions: ['html', 'htm']` 用我们自己的 body。
+
+设计：**不放行弹窗，全部点击经 postMessage 回到父组件**，父组件再决定去哪。
+
+```
+我们自己渲染的 iframe（sandbox 保持最小集：allow-scripts，不给 allow-same-origin）
+  注入一小段桥脚本：拦 <a> 点击 + 把路径文本包成可点
+  → parent.postMessage({ source: 'dsh-plugin-paths', kind: 'url' | 'path', target, line? })
+父组件（DSH 页面这一层，不在沙箱里）
+  kind === 'url'  → window.open(target, '_blank')   // Console 里走 guest handler → 系统浏览器
+  kind === 'path' → ctx.sidebarRight.openResource(dsh-resource://file/session/<id>/<path>)
+```
+
+为什么这样比"给 iframe 加 `allow-popups`"好：① 不依赖沙箱放行弹窗；② 两类目标（网页 / 文件）
+走同一条路，行为一致；③ 仍然保留样式与脚本隔离（iframe 仍是独立源）。
+
+代价（要自己保证的）：官方 html body 的细节（相对资源加载、缩放、CSP）我们接管后要自己做到位；
+iframe 的 sandbox 只能收紧不能放松（**不许**加 `allow-same-origin`）。
+
 ## 社区范例（告诉我们 UI 插件怎么拿 React）
 
 `dshmarket/client/client.js` 开头：
@@ -102,6 +131,26 @@ window.__ModuleLoader__.load({ id: "dshmarket", factory: (require) => {
    - `check-dist`：按包区分 host require 规则。
    - e2e：真 dsh + 无头 Chrome 打开一个含路径的 md，断言路径元素存在、点击后侧栏内容变化。
 6. 真机：`link:` 进 `~/.dsh/profiles/web` → 重启 dsh → 用 `reveal` 打开一个 md 验证（当前 profile 里 reveal 已经是 link 装的，paths 包按同样方式加）。
+
+## 相对路径怎么解析（待定，实现前定规则）
+
+md / html 里的路径有三种写法，语义不同，必须写死规则（否则"点了打开别的文件"更难查）：
+
+| 写法                                | 建议规则                                                                     |
+| ----------------------------------- | ---------------------------------------------------------------------------- |
+| `src/a.ts`（相对）                  | 先按**该文件所在目录**解析；不存在再按**工作区根**解析；都不存在就报"没找到" |
+| `/Users/…`（绝对）                  | 直接用；但仍要走 `ctx.fs` 校验存在性，不存在就报错                           |
+| `` `a.ts:12` ``（带行号）           | 拆出行号，打开时传 `params.line`（DSH 侧栏支持按行定位）                     |
+| 代码块 / 行内代码里的"像路径的东西" | 行内代码识别、**代码块里不识别**（避免把示例代码变成链接）                   |
+
+## 探针要验的三件事（第一步就做）
+
+1. **body 能不能真的接管**：注册一个只画"接管成功 + 地址"的 body，`link:` 进 profile、重启 dsh，
+   用一个 md 与一个 html 各验一次 —— 确认 `key` ↔ `sidebar.right.tab.document` 槽位的对应，以及
+   `priority: 'extension'` 确实压过 builtin（而在我们没认领的地址上官方 body 依旧生效）。
+2. **桥脚本的 postMessage 稳定到达**：iframe 里点 `<a>`／路径，父组件能收到并区分 `kind`。
+3. **两条路由在两种环境下都对**：Console 内嵌页（`http` → 系统浏览器，`path` → 侧栏换内容）与
+   纯浏览器（`http` → 新 tab，`path` → 侧栏换内容）。
 
 ## 未决 / 风险（实现时先验证）
 
