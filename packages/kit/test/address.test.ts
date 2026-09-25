@@ -5,6 +5,7 @@ import {
   fileAddressFor,
   isAbsoluteWorkspacePath,
   isWindowsStylePath,
+  parseSessionFileAddress,
   sessionFileAddress,
 } from '../src/address.js';
 
@@ -49,4 +50,29 @@ test('工作区内削成相对；工作区外**保留前导斜杠**（地址里�
     fileAddressFor('s1', undefined, '/tmp/a.md'),
     'dsh-resource://file/session/s1//tmp/a.md',
   );
+});
+
+test('parseSessionFileAddress：与 sessionFileAddress 互为逆运算', () => {
+  assert.deepEqual(parseSessionFileAddress('dsh-resource://file/session/s1/docs/x.html'), {
+    sessionId: 's1',
+    path: 'docs/x.html',
+  });
+  // 工作区外的绝对路径：地址里两个斜杠，解回来必须还是一个前导斜杠
+  assert.deepEqual(parseSessionFileAddress('dsh-resource://file/session/s1//tmp/shot.png'), {
+    sessionId: 's1',
+    path: '/tmp/shot.png',
+  });
+  assert.deepEqual(parseSessionFileAddress('dsh-resource://file/session/s%201/a%20b.md'), {
+    sessionId: 's 1',
+    path: 'a b.md',
+  });
+  assert.deepEqual(parseSessionFileAddress('dsh-resource://file/session/s1/'), {
+    sessionId: 's1',
+    path: '',
+  });
+  // 编码坏掉、作用域不对、空地址：一律 null（调用方别猜）
+  assert.equal(parseSessionFileAddress('dsh-resource://file/session/s1/%E0%A4%A'), null);
+  assert.equal(parseSessionFileAddress('dsh-resource://file/absolute/s1/x'), null);
+  assert.equal(parseSessionFileAddress('dsh-resource://file/session/'), null);
+  assert.equal(parseSessionFileAddress(''), null);
 });

@@ -83,10 +83,24 @@ for (const name of fs.readdirSync(packagesDir).sort()) {
       if (exports[field] === undefined)
         problems.push(`${manifest.name}: 浏览器半边没有导出 ${field}`);
     }
+    // 客户端产物里"向宿主要"的包必须按包声明清楚：
+    //   - 纯 ctx 包（reveal / 只注册槽位的包）应当**一个都不要**；
+    //   - UI 包（真要画组件的）把 `react` 一族写进 `dsh.client.hostRequires`。
+    // 没声明的就是漏了（或者本该打进产物却标了 external）。
+    const allowedHostRequires = manifest.dsh?.client?.hostRequires ?? [];
+    const undeclared = required.filter((specifier) => !allowedHostRequires.includes(specifier));
+    if (undeclared.length > 0) {
+      problems.push(
+        `${manifest.name}: 客户端产物向宿主要了未声明的包：${undeclared.join(', ')}` +
+          `（要么把它打进产物，要么加到 dsh.client.hostRequires）`,
+      );
+    }
     checked += 1;
     console.log(
       `✔ 浏览器 ${manifest.name} → inject=[${(exports.inject ?? []).join(', ')}]` +
-        (required.length > 0 ? `（host require: ${required.join(', ')}）` : '（无 host require）'),
+        (required.length > 0
+          ? `（host require: ${required.join(', ')}${undeclared.length === 0 ? ' ✓' : ' ✗'}）`
+          : '（无 host require）'),
     );
   }
 }

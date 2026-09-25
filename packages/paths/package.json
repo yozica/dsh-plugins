@@ -23,6 +23,9 @@
         "@deepseek-ai/dsh-client-ui-sidebar-documentpreview",
         "@deepseek-ai/dsh-client-ui-sidebar-right",
         "@deepseek-ai/dsh-client-ui-renderer"
+      ],
+      "hostRequires": [
+        "react"
       ]
     }
   },

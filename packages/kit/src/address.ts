@@ -40,6 +40,38 @@ export function sessionFileAddress(sessionId: string, path: string): string {
   return `${FILE_ADDRESS_PREFIX}session/${encodeSegment(sessionId)}/${encodePath(normalized)}`;
 }
 
+/** 一份会话作用域文件地址解出来的会话与路径 */
+export interface SessionFileAddress {
+  readonly sessionId: string;
+  /** 工作区相对路径，或**保留前导 `/` 的绝对路径**（工作区外） */
+  readonly path: string;
+}
+
+/**
+ * `sessionFileAddress()` 的逆运算 —— 从地址里取回会话与路径。
+ *
+ * 只认 `dsh-resource://file/session/<sessionId>/<path>`；地址里路径那一段可能以 `/` 开头
+ * （工作区外的绝对路径，见文件头），所以**按会话 id 后面的第一个 `/` 切一刀**即可：
+ * `…/session/s1//tmp/a.png` → sessionId `s1`、path `/tmp/a.png`。
+ *
+ * 其它形状（`absolute:` 作用域、非 `file` 资源、空地址）一律返回 `null`，交给调用方决定怎么办。
+ */
+export function parseSessionFileAddress(address: string): SessionFileAddress | null {
+  const prefix = `${FILE_ADDRESS_PREFIX}session/`;
+  if (typeof address !== 'string' || !address.startsWith(prefix)) return null;
+  const rest = address.slice(prefix.length);
+  const slash = rest.indexOf('/');
+  if (slash < 0) return null;
+  const rawSession = rest.slice(0, slash);
+  if (rawSession === '') return null;
+  const rawPath = rest.slice(slash + 1);
+  try {
+    return { sessionId: decodeURIComponent(rawSession), path: decodeURIComponent(rawPath) };
+  } catch {
+    return null; // 坏百分号编码：当作没解出来，别让界面炸
+  }
+}
+
 /**
  * 把一个路径变成"这份会话能打开"的地址。
  *

@@ -9,6 +9,20 @@
 import { requireClientServices } from './services.js';
 import type { ClientContext, SidebarRight } from './types.js';
 
+// 浏览器半边也能用地址逻辑（纯字符串，不碰文件系统）：`browser.ts` 里 import 的时候
+// 不该把 kit 的服务端半边（channel/tool）一起打进来，所以在这里再导出一次。
+export {
+  FILE_ADDRESS_PREFIX,
+  encodePath,
+  encodeSegment,
+  fileAddressFor,
+  isAbsoluteWorkspacePath,
+  isWindowsStylePath,
+  parseSessionFileAddress,
+  sessionFileAddress,
+  type SessionFileAddress,
+} from './address.js';
+
 /**
  * 订阅服务端的 SSE 频道，收到帧回调。
  *
