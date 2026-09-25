@@ -157,3 +157,31 @@ md / html 里的路径有三种写法，语义不同，必须写死规则（否�
 - body 的 `key` 与槽位 `sidebar.right.tab.document` 的对应关系，目前是从官方源码**读出来**的，还没用我们自己的包跑通一次 —— 这是第一个要打通的点（探针：注册一个 body，看它是否真的接管了 md 的渲染）。
 - 接管 md 后，官方的进阶渲染（表格 / 任务列表 / 图片 / sanitize）我们要补或接受降级；降级要写进 README 说清楚。
 - 依赖宿主 React/primitives 会随上游变动（选 A 的已知代价）；包要能单独卸载，坏了不影响 `reveal` 与 dsh 本体。
+
+## 探针实测结论（2026-09-25，真机）
+
+探针（`packages/paths/src/browser.ts`，只打日志、返回 `null`）在真机装进 `web` profile、重启 dsh 后：
+
+| 观察                                | 结果              | 含义                                                            |
+| ----------------------------------- | ----------------- | --------------------------------------------------------------- |
+| 侧栏标签显示 `md · paths`           | ✅                | 我们注册的 `title` 生效 → **客户端半边加载了、body 定义被采纳** |
+| 日志里 `[paths-probe] body invoked` | ❌ 一条没有       | 我们的**组件没被调用**                                          |
+| 面板正文                            | 卡在「正在读取…」 | 定义**接管了地址**，但没人画内容（官方 md 预览已让位）          |
+
+**最后一块未知 = slot 的 `key` 与 registry 选 body 的对应关系。** 官方写的是
+`ctx.slots.register({ name: 'sidebar.right.tab.document', key: PLAIN_BODY_ID }, TextBody)`，
+我照抄成"我们 body 定义的 id"，从现象看不对。下一轮读这两处对齐：
+
+1. `dsh-client-ui-sidebar-documentpreview/lib/client.js` 的 `DocumentPreviewRegistry.register(...)`
+   —— 定义里哪些字段参与"选哪个 body"；
+2. `dsh-client-ui-sidebar-right/lib/client.js` 的 `bodiesFor(panel)`
+   —— 它拿什么当 slot 的 `key`。
+
+### 踩过的坑（值得记住）
+
+- **`dsh.client.inject` 里的包名必须真实存在**，否则 loader **静默跳过**整个客户端半边：
+  没日志、没报错、`apply` 根本不跑。第一版我写了 `@deepseek-ai/dsh-client-ui-slots`——
+  安装里**没有**这个包（槽位注册表由 `@deepseek-ai/dsh-client-ui-renderer` 提供），
+  于是探针"什么都没发生"，排查成本很高。
+- 探针装着期间，**侧栏打开 md / html 会一直卡在「正在读取…」**（地址被我们接管、组件没画出来）。
+  验完要么对齐 key，要么先撤掉 profile 里那三处改动（依赖行 / bundles 末项 / `node_modules` 符号链接）。
