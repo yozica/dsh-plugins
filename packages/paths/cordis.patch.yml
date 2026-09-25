@@ -1,0 +1,5 @@
+# 这个 bundle 的层：把自己这一行插进 loader。
+# 装法（两种都吃）：`dsh plugin --profile web add <本目录|.release/*.tgz>`
+- insert:
+    - id: paths
+      name: '@yozica/dsh-plugin-paths'

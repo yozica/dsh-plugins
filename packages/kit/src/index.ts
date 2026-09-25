@@ -17,7 +17,9 @@ export {
   fileAddressFor,
   isAbsoluteWorkspacePath,
   isWindowsStylePath,
+  parseSessionFileAddress,
   sessionFileAddress,
+  type SessionFileAddress,
 } from './address.js';
 export { createSseChannel, isLoopback, sseData, type SseChannel } from './channel.js';
 export {

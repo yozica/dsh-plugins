@@ -83,10 +83,41 @@ for (const name of fs.readdirSync(packagesDir).sort()) {
       if (exports[field] === undefined)
         problems.push(`${manifest.name}: 浏览器半边没有导出 ${field}`);
     }
+    // 客户端产物允许向宿主要哪些包 —— 按**宿主真实机制**判，不按我们自己发明的字段：
+    //
+    //   - 壳的静态模块表（PLATFORM_MODULES，`dsh-web-frontend` 引导时 seed 进模块系统）；
+    //     在表里的名字可以直接 require，宿主一定提供。
+    //   - 其他精确模块请求必须写进 `dsh.client.external`（`WebBootEntry.external`），
+    //     组合期由宿主校验；没写的会在运行期解析失败。
+    //
+    // 名字来自本机 0.1.5-rc.x 壳产物里的 staticModules 表；上游加表项时同步这里即可。
+    const PLATFORM_MODULES = new Set([
+      'react',
+      'react/jsx-runtime',
+      'react-dom',
+      'react-dom/client',
+      '@deepseek-ai/cordis',
+      '@deepseek-ai/dsh-client-store',
+      '@deepseek-ai/dsh-client-ui-slots',
+      '@deepseek-ai/dsh-client-ui-primitives',
+      '@deepseek-ai/dsh-client-ui-dockkit',
+    ]);
+    const declaredExternal = manifest.dsh?.client?.external ?? [];
+    const undeclared = required.filter(
+      (specifier) => !PLATFORM_MODULES.has(specifier) && !declaredExternal.includes(specifier),
+    );
+    if (undeclared.length > 0) {
+      problems.push(
+        `${manifest.name}: 客户端产物 require 了宿主没承诺提供的包：${undeclared.join(', ')}` +
+          `（要么打进产物，要么它是静态模块；否则写进 dsh.client.external 并确认宿主会提供）`,
+      );
+    }
     checked += 1;
     console.log(
       `✔ 浏览器 ${manifest.name} → inject=[${(exports.inject ?? []).join(', ')}]` +
-        (required.length > 0 ? `（host require: ${required.join(', ')}）` : '（无 host require）'),
+        (required.length > 0
+          ? `（host require: ${required.join(', ')}${undeclared.length === 0 ? ' ✓' : ' ✗'}）`
+          : '（无 host require）'),
     );
   }
 }
