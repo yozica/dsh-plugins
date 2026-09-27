@@ -129,7 +129,7 @@ test('契约：定义形状（缺 loading / 或多注册父槽位都会被这里
   const { definitions, injections, registrations } = setup();
   assert.deepEqual(
     definitions.map((definition) => definition['id']),
-    ['plugin-paths:md', 'plugin-paths:html'],
+    ['plugin-panel-body:md', 'plugin-panel-body:html'],
   );
   const [markdown, html] = definitions as [Record<string, unknown>, Record<string, unknown>];
   assert.deepEqual(markdown['extensions'], ['md', 'markdown']);
@@ -148,7 +148,7 @@ test('契约：定义形状（缺 loading / 或多注册父槽位都会被这里
   // 子槽位 key 必须与 body 定义的 id 一致（官方用 entryKey = selected.id 派发）
   assert.deepEqual(
     registrations.map((registration) => registration.target.key),
-    ['plugin-paths:md', 'plugin-paths:html'],
+    ['plugin-panel-body:md', 'plugin-panel-body:html'],
   );
   assert.ok(
     registrations.every(
@@ -165,7 +165,7 @@ test('契约：Markdown body 渲染可点路径，点击带上当前文件地址
   const opened: [PathTarget, PathOrigin][] = [];
   const { registrations } = setup((target, origin) => opened.push([target, origin]));
   const markdown = registrations.find(
-    (registration) => registration.target.key === 'plugin-paths:md',
+    (registration) => registration.target.key === 'plugin-panel-body:md',
   );
   assert.ok(markdown !== undefined);
 
@@ -175,7 +175,7 @@ test('契约：Markdown body 渲染可点路径，点击带上当前文件地址
   });
   const target = findElement(
     tree,
-    (element) => element.props['data-dsh-paths-target'] === 'src/a.ts',
+    (element) => element.props['data-dsh-panel-body-target'] === 'src/a.ts',
   );
   assert.ok(target !== null);
   (target.props.onClick as (event: unknown) => void)({ preventDefault: () => {} });
@@ -190,7 +190,7 @@ test('契约：Markdown body 渲染可点路径，点击带上当前文件地址
 test('契约：Markdown 没拿到文本时也不炸（渲染空文档）', () => {
   const { registrations } = setup();
   const markdown = registrations.find(
-    (registration) => registration.target.key === 'plugin-paths:md',
+    (registration) => registration.target.key === 'plugin-panel-body:md',
   );
   assert.ok(markdown !== undefined);
   assert.doesNotThrow(() =>
@@ -202,10 +202,10 @@ test('契约：Markdown 没拿到文本时也不炸（渲染空文档）', () =>
 test('契约：只有 HTML 那个注册带 readRelated 注入，Markdown 不带', () => {
   const { registrations, readRelated } = setup();
   const markdown = registrations.find(
-    (registration) => registration.target.key === 'plugin-paths:md',
+    (registration) => registration.target.key === 'plugin-panel-body:md',
   );
   const html = registrations.find(
-    (registration) => registration.target.key === 'plugin-paths:html',
+    (registration) => registration.target.key === 'plugin-panel-body:html',
   );
   assert.ok(markdown !== undefined && html !== undefined);
   assert.equal(markdown.target.inject, undefined);
@@ -215,7 +215,7 @@ test('契约：只有 HTML 那个注册带 readRelated 注入，Markdown 不带'
 test('契约：同一份正文重复渲染只解析一次（useMemo 依赖必须稳定）', () => {
   const { registrations, hCalls } = setup();
   const markdown = registrations.find(
-    (registration) => registration.target.key === 'plugin-paths:md',
+    (registration) => registration.target.key === 'plugin-panel-body:md',
   );
   assert.ok(markdown !== undefined);
   const props = {
@@ -240,14 +240,14 @@ test('契约：guard（错误边界）会包住我们返回的树', () => {
     },
   });
   const markdown = registrations.find(
-    (registration) => registration.target.key === 'plugin-paths:md',
+    (registration) => registration.target.key === 'plugin-panel-body:md',
   );
   assert.ok(markdown !== undefined);
   const tree = markdown.component({ content: { kind: 'text', text: '正文' } });
   assert.deepEqual(Object.keys(tree as object).sort(), ['child', 'fallback', 'type']);
   assert.equal(seen.length, 1);
   // fallback 是"原文 <pre>"：渲染崩了就退回它，而不是白屏
-  assert.equal((seen[0]?.fallback as Element).props['data-dsh-paths-fallback'], true);
+  assert.equal((seen[0]?.fallback as Element).props['data-dsh-panel-body-fallback'], true);
 });
 
 test('契约：渲染抛错时退回原文（fallback 分支）', () => {
@@ -261,10 +261,10 @@ test('契约：渲染抛错时退回原文（fallback 分支）', () => {
     },
   });
   const markdown = registrations.find(
-    (registration) => registration.target.key === 'plugin-paths:md',
+    (registration) => registration.target.key === 'plugin-panel-body:md',
   );
   assert.ok(markdown !== undefined);
   const tree = markdown.component({ content: { kind: 'text', text: '正文' } });
-  assert.equal((tree as Element).props['data-dsh-paths-fallback'], true);
+  assert.equal((tree as Element).props['data-dsh-panel-body-fallback'], true);
   assert.equal((tree as Element).children[0], '正文');
 });

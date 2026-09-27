@@ -23,7 +23,7 @@ test('srcdoc：带桥标记、路径包裹、资源 blob 重写', () => {
     { kind: 'stylesheet', reference: 'a.css', text: 'body{color:red}' },
   ]);
   assert.ok(document.includes(BRIDGE_SOURCE));
-  assert.ok(document.includes('data-dsh-paths-reveal'));
+  assert.ok(document.includes('data-dsh-panel-body-reveal'));
   assert.ok(document.includes('URL.createObjectURL'));
   assert.ok(document.includes('body{color:red}'));
   assert.ok(document.includes('MutationObserver'));

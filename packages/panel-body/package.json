@@ -1,5 +1,5 @@
 {
-  "name": "@yozica/dsh-plugin-paths",
+  "name": "@yozica/dsh-plugin-panel-body",
   "version": "0.1.0",
   "type": "module",
   "description": "让侧栏里看到的东西可点：Markdown / HTML 里的文件路径与链接（网页交给浏览器，文件在侧栏打开）",
@@ -34,7 +34,7 @@
   "repository": {
     "type": "git",
     "url": "git+https://github.com/yozica/dsh-plugins.git",
-    "directory": "packages/paths"
+    "directory": "packages/panel-body"
   },
   "publishConfig": {
     "access": "public",

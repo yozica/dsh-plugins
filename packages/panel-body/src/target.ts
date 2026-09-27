@@ -10,9 +10,9 @@
  *
  * 存在性检查是**尽力而为**：拿不到 `remote.workspaceFiles` 时不做检查，直接按规则 1 打开。
  *
- * @module @yozica/dsh-plugin-paths/target
+ * @module @yozica/dsh-plugin-panel-body/target
  */
-import { isWindowsStylePath, sessionFileAddress } from '@yozica/dsh-plugin-kit/client';
+import { fileAddressFor, isWindowsStylePath } from '@yozica/dsh-plugin-kit/client';
 
 import { relativeCandidates, type PathTarget } from './paths.js';
 
@@ -20,8 +20,15 @@ export interface OpenTargetContext {
   readonly sessionId: string;
   /** 当前正文文件在工作区里的路径（相对或绝对） */
   readonly filePath: string;
-  /** 可选的存在性检查（相对或绝对路径 → 能不能读到） */
-  readonly exists?: (path: string) => Promise<boolean>;
+  /**
+   * 把候选路径**解析成绝对路径**（解析不到给 `undefined`）。
+   *
+   * 注意它返回绝对路径、不是布尔：相对路径经 `..` 越过工作区根时，只有宿主说得准
+   * 那个路径落到哪儿（上游的 `stat` 明确允许工作区外的路径）。返回布尔的话我们只能
+   * 自己拼字符串，而拼出来的相对路径一旦越过工作区根就是错的 —— 那正是
+   * 「`../../docs/x.md` 打不开」这个 bug 的成因。
+   */
+  readonly resolve?: (path: string) => Promise<string | undefined>;
   readonly open: (address: string, line?: number) => void;
 }
 
@@ -38,23 +45,25 @@ export async function openFileTarget(
   if (!absolute) {
     const candidates = relativeCandidates(context.filePath, normalized);
     chosen = candidates[0] ?? normalized;
-    if (context.exists !== undefined) {
+    if (context.resolve !== undefined) {
       for (const candidate of candidates) {
-        let found = false;
+        let resolved: string | undefined;
         try {
-          found = await context.exists(candidate);
+          resolved = await context.resolve(candidate);
         } catch {
-          found = false; // 读失败就当下一个候选，别让一次探测打断点击
+          resolved = undefined; // 解析失败就当下一个候选，别让一次探测打断点击
         }
-        if (found) {
-          chosen = candidate;
+        if (resolved !== undefined) {
+          chosen = resolved;
           break;
         }
       }
     }
   }
 
-  const address = sessionFileAddress(context.sessionId, chosen);
+  // `cwd` 给 undefined：这时 `chosen` 要么是宿主解析出的绝对路径、要么本身就是绝对写法，
+  // 两者都该原样编码（工作区外的绝对路径保留前导 `/`，见 kit 的 `fileAddressFor`）。
+  const address = fileAddressFor(context.sessionId, undefined, chosen);
   context.open(address, target.line);
   return address;
 }

@@ -28,7 +28,7 @@ importers:
 
   packages/kit: {}
 
-  packages/paths:
+  packages/panel-body:
     dependencies:
       '@yozica/dsh-plugin-kit':
         specifier: workspace:*
@@ -39,6 +39,15 @@ importers:
       '@yozica/dsh-plugin-kit':
         specifier: workspace:*
         version: link:../kit
+
+  packages/suite:
+    dependencies:
+      '@yozica/dsh-plugin-panel-body':
+        specifier: workspace:*
+        version: link:../panel-body
+      '@yozica/dsh-plugin-reveal':
+        specifier: workspace:*
+        version: link:../reveal
 
 packages:
   '@babel/runtime@7.29.7':

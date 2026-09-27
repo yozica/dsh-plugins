@@ -2,7 +2,7 @@
  * AST → 元素树。**不 import React**：`createElement` 由调用方注入（`browser.ts` 传宿主的 React，
  * 测试传一个假的 `h`），这样渲染逻辑能在 Node 里断言，也避免为了一个探针把 React 拖进单测。
  *
- * @module @yozica/dsh-plugin-paths/view
+ * @module @yozica/dsh-plugin-panel-body/view
  */
 import { parseMarkdown, type Block, type Inline } from './markdown.js';
 import { classifyHref, classifyPathToken, type PathTarget } from './paths.js';
@@ -29,7 +29,7 @@ export function renderMarkdown(source: string, deps: ViewDeps): unknown {
   const blocks = parseMarkdown(source);
   return deps.h(
     'div',
-    { className: 'dsh-paths-document', 'data-dsh-paths-document': true },
+    { className: 'dsh-panel-body-document', 'data-dsh-panel-body-document': true },
     ...blocks.map((block, index) => renderBlock(block, deps, `b${index}`)),
   );
 }
@@ -45,7 +45,7 @@ function renderBlock(block: Block, deps: ViewDeps, key: string): unknown {
     case 'code':
       return deps.h(
         'pre',
-        { key, className: 'dsh-paths-pre', 'data-dsh-paths-code': true },
+        { key, className: 'dsh-panel-body-pre', 'data-dsh-panel-body-code': true },
         deps.h(
           'code',
           block.lang === '' ? null : { className: `language-${block.lang}` },
@@ -99,11 +99,28 @@ function renderBlock(block: Block, deps: ViewDeps, key: string): unknown {
           ),
         ),
       );
-      return deps.h('table', { key, className: 'dsh-paths-table' }, head, body);
+      return deps.h('table', { key, className: 'dsh-panel-body-table' }, head, body);
     }
     case 'hr':
       return deps.h('hr', { key });
   }
+}
+
+/**
+ * 把一段行内节点摊成**纯展示文本**：只保留文字，不做任何"这是不是路径"的判定。
+ *
+ * 专给「指向路径的链接」的链接文字用 —— 那部分文字只负责显示，点击目标由 href 决定。
+ * 若走 `renderInline`，反引号会被判成路径并渲染成**另一个可点元素**，它会先吃掉点击
+ * （见 `case 'link'` 的注释）。
+ */
+function plainInline(nodes: readonly Inline[]): string {
+  return nodes
+    .map((node) => {
+      if (node.kind === 'text') return node.value;
+      if (node.kind === 'code') return `\`${node.value}\``;
+      return plainInline(node.children);
+    })
+    .join('');
 }
 
 function renderInline(nodes: readonly Inline[], deps: ViewDeps, keyPrefix: string): unknown[] {
@@ -115,22 +132,30 @@ function renderInline(nodes: readonly Inline[], deps: ViewDeps, keyPrefix: strin
       case 'code': {
         const target = classifyPathToken(node.value);
         if (target !== null) return pathElement(deps, target, 'code', key, node.value);
-        return deps.h('code', { key, className: 'dsh-paths-code' }, node.value);
+        return deps.h('code', { key, className: 'dsh-panel-body-code' }, node.value);
       }
       case 'strong':
         return deps.h('strong', { key }, ...renderInline(node.children, deps, `${key}s`));
       case 'em':
         return deps.h('em', { key }, ...renderInline(node.children, deps, `${key}e`));
       case 'link': {
-        const children = renderInline(node.children, deps, `${key}l`);
         const target = classifyHref(node.href);
-        if (target.kind === 'path') return pathElement(deps, target.target, 'link', key, children);
+        // 指向路径的链接：**目标一律取 href**，children 只当展示。
+        //
+        // 不能拿 `renderInline(children)` 的结果去当链接内容 —— 链接文字里常有反引号
+        // （``[`docs/a.md`](../../docs/a.md)``，文字恰好也是一个合法路径），那样会在 `<a>` 里
+        // 再套一个**可点的行内代码元素**，而它**先收到点击**：于是点可见文字走的是"行内代码"
+        // 那条路、用的是链接文字而不是 href —— 解析出的目标就错了。
+        if (target.kind === 'path') {
+          return pathElement(deps, target.target, 'link', key, plainInline(node.children));
+        }
+        const children = renderInline(node.children, deps, `${key}l`);
         if (target.kind === 'external') {
           return deps.h(
             'a',
             {
               key,
-              className: 'dsh-paths-external',
+              className: 'dsh-panel-body-external',
               href: target.url,
               target: '_blank',
               rel: 'noreferrer noopener',
@@ -140,7 +165,7 @@ function renderInline(nodes: readonly Inline[], deps: ViewDeps, keyPrefix: strin
         }
         if (target.kind === 'anchor') return deps.h('a', { key, href: node.href }, ...children);
         // 认不出来的 href（含指向不存在路径的写法）不给点：渲染成普通文字，别让页面乱跳
-        return deps.h('span', { key, className: 'dsh-paths-plain' }, ...children);
+        return deps.h('span', { key, className: 'dsh-panel-body-plain' }, ...children);
       }
     }
   });
@@ -156,7 +181,7 @@ function renderInline(nodes: readonly Inline[], deps: ViewDeps, keyPrefix: strin
  * 有 `href` 的话壳的 window-open 处理器会把 `#` 解析成应用自身 URL 并用**系统浏览器**打开，
  * 用户会莫名其妙多出一个标签页。官方渲染器的文件提及也是个 `<button>`，同样没有 `href`。
  *
- * `data-dsh-paths-*` 给 e2e 与真机核对用。
+ * `data-dsh-panel-body-*` 给 e2e 与真机核对用。
  */
 function pathElement(
   deps: ViewDeps,
@@ -177,16 +202,16 @@ function pathElement(
   };
   const props: Record<string, unknown> = {
     key,
-    className: 'dsh-paths-target',
+    className: 'dsh-panel-body-target',
     role: 'link',
     tabIndex: 0,
-    'data-dsh-paths-kind': source,
-    'data-dsh-paths-target': target.path,
+    'data-dsh-panel-body-kind': source,
+    'data-dsh-panel-body-target': target.path,
     title: STRINGS.openPathTitle(target.path, target.line),
     onClick: open,
     onKeyDown,
   };
-  if (target.line !== undefined) props['data-dsh-paths-line'] = target.line;
+  if (target.line !== undefined) props['data-dsh-panel-body-line'] = target.line;
   if (source === 'code') return deps.h('code', props, children);
   return deps.h('a', props, children);
 }

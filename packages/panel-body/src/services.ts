@@ -19,7 +19,7 @@
  * 结论：`inject` 只放"没有它就完全没意义"的服务；其余一律用
  * `ctx.reflect.get(name, false)` **非严格读取**（拿不到返回 `undefined`，不抛、也不影响 fiber 激活）。
  *
- * @module @yozica/dsh-plugin-paths/services
+ * @module @yozica/dsh-plugin-panel-body/services
  */
 
 /** 只要这几个面就能安全读服务 */

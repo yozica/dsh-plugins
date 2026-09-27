@@ -25,7 +25,7 @@
  * 再退到 `ctx.reflect.get(name, false)`。拿不到返回 `undefined`，不抛、也不影响 fiber 激活。
  * **永远不要直接写 `ctx.xxx`。**
  *
- * @module @yozica/dsh-plugin-paths/browser
+ * @module @yozica/dsh-plugin-panel-body/browser
  */
 import { parseSessionFileAddress } from '@yozica/dsh-plugin-kit/client';
 import * as React from 'react';
@@ -39,7 +39,7 @@ import { STRINGS } from './strings.js';
 import { ensureStyles } from './styles.js';
 import { openFileTarget } from './target.js';
 
-export const name = 'plugin-paths';
+export const name = 'plugin-panel-body';
 
 /** 只有这两个是硬依赖：没有它们，注册 body / 组件这件事根本无从谈起。 */
 export const inject = ['documentPreviews', 'slots'];
@@ -78,17 +78,25 @@ function createGuard(
 
     componentDidCatch(error: Error, info?: { componentStack?: string | null }): void {
       try {
-        document.documentElement.setAttribute('data-dsh-paths-crashed', error.message);
+        document.documentElement.setAttribute('data-dsh-panel-body-crashed', error.message);
       } catch {
         /* 标记失败无所谓 */
       }
-      console.error('[dsh-plugin-paths] 渲染崩溃，已退回显示原文', error, info?.componentStack);
+      console.error(
+        '[dsh-plugin-panel-body] 渲染崩溃，已退回显示原文',
+        error,
+        info?.componentStack,
+      );
     }
 
     render(): unknown {
       if (this.state.error === null) return this.props.children;
-      return createElement('div', { 'data-dsh-paths-crashed': true }, [
-        createElement('p', { key: 'note', className: 'dsh-paths-status' }, STRINGS.renderCrash),
+      return createElement('div', { 'data-dsh-panel-body-crashed': true }, [
+        createElement(
+          'p',
+          { key: 'note', className: 'dsh-panel-body-status' },
+          STRINGS.renderCrash,
+        ),
         this.props.fallback,
       ]);
     }
@@ -98,7 +106,7 @@ function createGuard(
 }
 
 /**
- * 挂载/点击出错时**别静默**：右下角一条红条，同时给 `<html>` 打一个 `data-dsh-paths-failed`。
+ * 挂载/点击出错时**别静默**：右下角一条红条，同时给 `<html>` 打一个 `data-dsh-panel-body-failed`。
  *
  * 为什么要留这个：打包版 Console 里 DSH 界面是 guest `<webview>`，**console 不落盘**
  * （`console.log` 进不去，warning 也没写），所以"悄悄失效"是最贵的故障 ——
@@ -108,11 +116,11 @@ function reportFailure(error: unknown): void {
   try {
     const message = error instanceof Error ? `${error.name}: ${error.message}` : String(error);
     if (typeof document === 'undefined') return;
-    document.documentElement.setAttribute('data-dsh-paths-failed', message);
-    if (document.getElementById('dsh-paths-failed') !== null) return;
+    document.documentElement.setAttribute('data-dsh-panel-body-failed', message);
+    if (document.getElementById('dsh-panel-body-failed') !== null) return;
     const host = document.body ?? document.documentElement;
     const node = document.createElement('div');
-    node.id = 'dsh-paths-failed';
+    node.id = 'dsh-panel-body-failed';
     node.style.cssText =
       'position:fixed;right:8px;bottom:8px;z-index:2147483647;font:11px/1.5 ui-monospace,monospace;' +
       'padding:4px 8px;border-radius:6px;max-width:60vw;white-space:pre-wrap;background:#c0392b;color:#fff';
@@ -134,6 +142,19 @@ interface WorkspaceFilesLike {
     range: { offset: number },
     signal?: AbortSignal,
   ): Promise<{ readonly ok: boolean }>;
+  /**
+   * 解析路径并给出它的事实 —— 我们要的是 `absolutePath`（**相对路径越过工作区根**、
+   * 或本来就是工作区外的绝对路径时，只有宿主说得准它落到哪儿）。
+   * 上游契约：`path` 是"绝对路径或工作区相对路径"，**工作区外也允许**。
+   */
+  stat(
+    sessionId: string,
+    path: string,
+    signal?: AbortSignal,
+  ): Promise<
+    | { readonly ok: true; readonly value: { readonly absolutePath: string } }
+    | { readonly ok: false; readonly error: { readonly message: string } }
+  >;
   readRelated(
     sessionId: string,
     path: string,
@@ -217,16 +238,23 @@ function createReadRelated(ctx: PathsContext): ReadRelated | undefined {
   };
 }
 
-/** 存在性探测（相对路径先看"文件所在目录"、再看"工作区根"时用）；拿不到服务就不探测 */
-function createExists(
+/**
+ * 把候选路径**解析成绝对路径**（相对路径先看"文件所在目录"、再看"工作区根"时用）；
+ * 拿不到服务就不解析，退回"直接按第一条规则打开"。
+ *
+ * 这里用 `stat` 而不是 `read`：要的是宿主的**路径解析结果**（`absolutePath`），
+ * 不是"读不读得到"。两者在"相对路径越过工作区根"时结论不同 —— `read` 只认工作区内，
+ * 返回假之后我们就只能拿拼错的相对路径去造地址（老 bug）；`stat` 明确允许工作区外。
+ */
+function createResolve(
   ctx: PathsContext,
   sessionId: string,
-): ((path: string) => Promise<boolean>) | undefined {
+): ((path: string) => Promise<string | undefined>) | undefined {
   const workspaceFiles = workspaceFilesOf(ctx);
   if (workspaceFiles === undefined) return undefined;
-  return async (path: string): Promise<boolean> => {
-    const result = await workspaceFiles.read(sessionId, path, { offset: 1 });
-    return result.ok;
+  return async (path: string): Promise<string | undefined> => {
+    const result = await workspaceFiles.stat(sessionId, path);
+    return result.ok ? result.value.absolutePath : undefined;
   };
 }
 
@@ -257,7 +285,7 @@ async function openTarget(
     {
       sessionId: reference.sessionId,
       filePath: reference.path,
-      exists: createExists(ctx, reference.sessionId),
+      resolve: createResolve(ctx, reference.sessionId),
       open: (resource, line) => {
         sidebar.openResource(resource, line === undefined ? undefined : { params: { line } });
       },
@@ -271,6 +299,6 @@ function openExternal(ctx: PathsContext, url: string): void {
   try {
     window.open(url, '_blank', 'noopener,noreferrer');
   } catch (error) {
-    ctx.logger?.warn('[dsh-plugin-paths] 打开外链失败：', error);
+    ctx.logger?.warn('[dsh-plugin-panel-body] 打开外链失败：', error);
   }
 }

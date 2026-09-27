@@ -11,6 +11,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import vm from 'node:vm';
+import { pathToFileURL } from 'node:url';
 
 const root = path.resolve(import.meta.dirname, '..');
 const packagesDir = path.join(root, 'packages');
@@ -22,12 +23,34 @@ for (const name of fs.readdirSync(packagesDir).sort()) {
   const manifestPath = path.join(dir, 'package.json');
   if (!fs.existsSync(manifestPath)) continue;
   const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
-  const isPlugin = manifest.dsh !== undefined;
+  // 有 `dsh` 字段**不等于**是一个带服务端半边的插件：统合包（`packages/suite`）只声明 `dsh.bundle`
+  // —— 一个 manifest 加一份 patch，没有 `lib/`。"有没有服务端半边"要看 `dsh.client`
+  // （那是插件的声明），所以这一类不能按"缺 lib/index.js"报错。
+  const isBundle = manifest.dsh?.bundle !== undefined;
+  const isPlugin = manifest.dsh !== undefined && !isBundle;
+
+  // 统合包：产物形状是"那份 patch 文件在不在、里面有没有插入条目"
+  if (isBundle) {
+    const patchRel = manifest.dsh.bundle.patch;
+    const patchFile = path.resolve(dir, patchRel ?? '');
+    if (patchRel === undefined || !fs.existsSync(patchFile)) {
+      problems.push(`${manifest.name}: dsh.bundle.patch 指向的文件不存在（${patchRel}）`);
+    } else {
+      const text = fs.readFileSync(patchFile, 'utf8');
+      const inserted = (text.match(/^\s*-\s*id:/gm) ?? []).length;
+      if (inserted === 0) problems.push(`${manifest.name}: ${patchRel} 里没有插入任何条目`);
+      checked += 1;
+      console.log(`✔ 统合包 ${manifest.name} → ${patchRel}（插入 ${inserted} 条）`);
+    }
+  }
 
   // 服务端半边
   const serverEntry = path.join(dir, 'lib', 'index.js');
   if (fs.existsSync(serverEntry)) {
-    const module = await import(`${serverEntry}?t=${Date.now()}`);
+    // 必须转成 file:// URL：Windows 上裸盘符路径（`C:\…`）会被 ESM loader 拒掉
+    // （`ERR_UNSUPPORTED_ESM_URL_SCHEME: … Received protocol 'c:'`）。
+    // 这个脚本此前在 Windows 上从来没跑通过，而 CI 是 ubuntu-latest，所以一直没暴露。
+    const module = await import(`${pathToFileURL(serverEntry).href}?t=${Date.now()}`);
     if (isPlugin) {
       for (const field of ['name', 'apply']) {
         if (typeof module[field] !== 'function' && typeof module[field] !== 'string') {

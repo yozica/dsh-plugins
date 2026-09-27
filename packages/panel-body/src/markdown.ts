@@ -12,7 +12,7 @@
  * - **围栏跨页**：`text-pages` 模式下 `content.text` 可能是"还没读完"的前缀。
  *   没闭合的围栏按"后面都是代码"处理（很长的代码块也不会渲染成半截正文）。
  *
- * @module @yozica/dsh-plugin-paths/markdown
+ * @module @yozica/dsh-plugin-panel-body/markdown
  */
 
 /** 行内节点 */

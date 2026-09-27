@@ -1,0 +1,19 @@
+# 统合包的层：把两个插件的 loader 条目一起插进来。
+#
+# 一个 `insert:` 块可以放多条（官方 `@deepseek-ai/dsh-web-app` 的 patch 就是这么写的）。
+# 条目 id / name 与两个单包各自那份 patch **逐字一致** —— 所以：
+#
+#   ⚠️ 统合包与单包**二选一**，不要同时装。同时装会让同一个 id 出现两次，
+#      而 `@deepseek-ai/cordis-plugin-loader` 在加载时是
+#      `if (seen.has(id)) throw new TypeError('duplicate loader entry id: …')` ——
+#      直接用这个 profile 起 dsh 会失败。
+#      注意 `--dump-config` **不检查**这一点（两条都照印、退出码 0），所以别拿它当判据。
+#
+# 也正因为它是启动期抛异常，"让统合包的层去 disable 单包那一层"这条路走不通：
+# 加载阶段还没轮到后面那些覆盖规则，异常就已经抛出来了。
+- insert:
+    - id: reveal
+      name: '@yozica/dsh-plugin-reveal'
+
+    - id: panel-body
+      name: '@yozica/dsh-plugin-panel-body'

@@ -1,6 +1,6 @@
 # AGENTS.md — 在这个仓库里干活
 
-自研 **DSH（DeepSeek Harness）插件**的多包仓：`packages/kit`（公共件）+ `packages/reveal` + `packages/paths`。
+自研 **DSH（DeepSeek Harness）插件**的多包仓：`packages/kit`（公共件）+ `packages/reveal` + `packages/panel-body`。
 每个插件都是**双面插件**：服务端半边（agent 工具 / 路由）+ 浏览器半边（界面），两半用一条 SSE 频道连起来。
 
 **先读 [`docs/handoff.md`](docs/handoff.md)**：它的 §0 是**当前进度快照**（做到哪了、发了没有、卡在哪、

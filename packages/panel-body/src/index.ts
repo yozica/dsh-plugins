@@ -5,9 +5,9 @@
  * `scripts/check-dist.mjs` 也要能断言服务端产物的形状（name / inject / apply）。
  * 将来若要加服务端能力（例如按文件类型给出可点规则），落点在这里。
  *
- * @module @yozica/dsh-plugin-paths
+ * @module @yozica/dsh-plugin-panel-body
  */
-export const name = 'plugin-paths';
+export const name = 'plugin-panel-body';
 
 export const inject: readonly string[] = [];
 

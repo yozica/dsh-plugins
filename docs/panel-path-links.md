@@ -10,7 +10,7 @@
 | 侧栏里 **裸路径**（`` `src/a.ts` ``）、**指路径的 Markdown 链接** | ❌ 渲染成普通文本，"本身就是文本"                                                                                                              |
 | 侧栏里 **HTML 预览**中的任何链接                                  | ❌ 点不动 —— 官方用 `sandbox="allow-scripts"` 的 iframe（无 `allow-popups`），点击在 iframe 内就被丢掉，**外壳收不到、我们救不了，也不该去改** |
 
-所以本文件的范围是**两条**，都落在新包 `@yozica/dsh-plugin-paths` 里；`@yozica/dsh-plugin-reveal`
+所以本文件的范围是**两条**，都落在新包 `@yozica/dsh-plugin-panel-body` 里；`@yozica/dsh-plugin-reveal`
 **只保留"agent 主动把东西摊到侧栏"这一个能力，不动**：
 
 | 内容类型                     | 谁渲染                               | 要解决的问题                 |
@@ -28,7 +28,7 @@
 ```ts
 // 1) 定义：这个 body 认领哪些文件
 ctx.documentPreviews.register({
-  id: '@yozica/dsh-plugin-paths:md',
+  id: '@yozica/dsh-plugin-panel-body:md',
   extensions: ['md'], // 也可以用 canOpen/patterns 一类判定
   priority: 'extension', // extension 可以接管 builtin 同 kind 的位子
   title,
@@ -79,7 +79,7 @@ ctx.sidebarRightTabs.register({ id, kind, patterns?, canOpen?, priority: 'extens
 ```
 我们自己渲染的 iframe（sandbox 保持最小集：allow-scripts，不给 allow-same-origin）
   注入一小段桥脚本：拦 <a> 点击 + 把路径文本包成可点
-  → parent.postMessage({ source: 'dsh-plugin-paths', kind: 'url' | 'path', target, line? })
+  → parent.postMessage({ source: 'dsh-plugin-panel-body', kind: 'url' | 'path', target, line? })
 父组件（DSH 页面这一层，不在沙箱里）
   kind === 'url'  → window.open(target, '_blank')   // Console 里走 guest handler → 系统浏览器
   kind === 'path' → ctx.sidebarRight.openResource(dsh-resource://file/session/<id>/<path>)
@@ -107,18 +107,18 @@ window.__ModuleLoader__.load({ id: "dshmarket", factory: (require) => {
 
 ## 决定（已裁定）
 
-- **走这条路**：新开一个 UI 包 **`@yozica/dsh-plugin-paths`**，接管 `md` body，自己渲染 + 路径可点。
+- **走这条路**：新开一个 UI 包 **`@yozica/dsh-plugin-panel-body`**，接管 `md` body，自己渲染 + 路径可点。
 - **`@yozica/dsh-plugin-reveal` 保持"client 半边零 host require"**（它的卖点之一），不要往里塞 UI。
 - **已知代价（明确接受）**：UI 包 client 半边依赖宿主 `react`（可能还有 primitives）→ `scripts/check-dist.mjs` 里"host require 必须为空"那条断言要**按包区分**（纯 ctx 包 vs UI 包），不能一刀切。
 
 ## 实现清单（按顺序）
 
 1. ✅ `scripts/build-client.mjs`：`react` / `react-dom` / `react/jsx-runtime` 进 external。
-2. ✅ 新包 `packages/paths/`：
+2. ✅ 新包 `packages/panel-body/`：
    - `package.json`：`dsh.bundle.patch` → `./cordis.patch.yml`；`dsh.client { platform, inject }`
      （**不需要**声明 `react`：它在宿主的静态模块表里，见「host require 到底怎么判」）；
      `files` 含 `lib` + patch + README。
-   - `cordis.patch.yml`：`- insert: [{ id: paths, name: '@yozica/dsh-plugin-paths' }]`。
+   - `cordis.patch.yml`：`- insert: [{ id: panel-body, name: '@yozica/dsh-plugin-panel-body' }]`。
    - `src/index.ts`：server 半边最小实现（`name` / `inject` / `apply`），只为让 bundle 能被装配。
    - `src/browser.ts`：**唯一** `import react` 的文件，只做接线；被 tsconfig 排除，仅由 esbuild 打包。
 3. ✅ 组件（拆成可单测的纯模块，React 只从 `browser.ts` 注入）：
@@ -129,10 +129,10 @@ window.__ModuleLoader__.load({ id: "dshmarket", factory: (require) => {
      `http(s)` → `<a target="_blank">` 交给浏览器（HTML 里经桥 → `window.open`）。
    - sessionId 来源：正文地址 `resourceAddress`（= `tab.contentId`）自己解析（复用 kit 新增的 `parseSessionFileAddress`）。
    - HTML：`src/html.ts` 打包相对 `script` / `link` 资源 + `src/bridge.ts` 生成 iframe `srcdoc`（引导脚本 + 点击拦截 + 路径包裹）。
-4. ✅ 兜底：Markdown 解析/渲染异常退回显示原文（`data-dsh-paths-fallback`）；
+4. ✅ 兜底：Markdown 解析/渲染异常退回显示原文（`data-dsh-panel-body-fallback`）；
    只按扩展名认领 `md` / `markdown` / `html` / `htm`，**我们没认领的地址官方 body 照常生效**
    （候选列表里官方定义仍在，查看器菜单还能切回去）。
-5. ✅ 测试（`packages/paths/test/`，35 个）：
+5. ✅ 测试（`packages/panel-body/test/`，35 个）：
    - `paths.test.ts` 路径识别表（相对 / 绝对 / 带行号 / `~` / Windows 反斜杠 / 误报样本）；
    - `markdown.test.ts` 解析（未闭合围栏、转义、引用式链接不认）；
    - `view.test.ts` 渲染产物断言（可点元素、代码块不识别、外链属性）；
@@ -141,8 +141,8 @@ window.__ModuleLoader__.load({ id: "dshmarket", factory: (require) => {
    - `target.test.ts` 候选顺序 / 行号透传 / 探测抛错降级；
    - `services.test.ts` 非严格读服务（含"假 ctx 里一个读属性就抛的代理"）；
    - `check-dist`：客户端产物的 host require 必须落在宿主**静态模块表**里（或写进 `dsh.client.external`）。
-   - ⏳ e2e（真 dsh + 无头 Chrome）还没做；当前靠 `docs/fixtures/paths-demo.*` 手动验收。
-6. ✅ 真机：`link:` 进 `~/.dsh/profiles/web` → 重启 dsh → `reveal` 打开 `docs/fixtures/paths-demo.md` 点一遍
+   - ⏳ e2e（真 dsh + 无头 Chrome）还没做；当前靠 `docs/fixtures/panel-body-demo.*` 手动验收。
+6. ✅ 真机：`link:` 进 `~/.dsh/profiles/web` → 重启 dsh → `reveal` 打开 `docs/fixtures/panel-body-demo.md` 点一遍
    （2026-09-25 逐条跑通，见文末）。
 
 ## 相对路径怎么解析（已定；实现见 `src/target.ts`）
@@ -171,10 +171,21 @@ md / html 里的路径有三种写法，语义不同，必须写死规则（否�
 - ✅ **已解决**：`check-dist` 现在按**宿主真实机制**校验 host require（静态模块表 ∪ `dsh.client.external`）。
   注：我原先自造的 `dsh.client.hostRequires` 字段在官方文档/代码里**不存在**，已删除（见文末审计）。
 - ⚠️ **降级要接受**：接管后官方 Markdown 的进阶渲染（任务列表 / 脚注 / 缩进代码 / HTML 块）与部分 HTML 资源形态不再支持 ——
-  清单在 [`packages/paths/README.md`](../packages/paths/README.md) 的「已知降级」，改动前先看。
+  清单在 [`packages/panel-body/README.md`](../packages/panel-body/README.md) 的「已知降级」，改动前先看。
 - ⚠️ 依赖宿主 `react` 与 `documentPreviews` / `slots` / `remote.workspaceFiles` 的形状，会随上游变动；
   包可单独卸载，坏了不影响 `reveal` 与 dsh 本体。
 - ⏳ e2e（真 dsh + 无头 Chrome）与"纯浏览器（非 Console）"两条路由还没自动化覆盖。
+- ⚠️ **行号定位（`:30` 那种）由宿主实现，我们控制不了精度 —— 实测有偏差**（2026-09-26 真机）：
+  点 `…/plug.ts:30`，滚动落点大约在第 34 行附近，**且没有任何行出现目标的底色高亮**。
+  高亮样式是有的（宿主 CSS 里 `.dhJKeW_lineTarget{background:var(--dsw-alias-interactive-bg-hover)}`），
+  没出现说明**宿主始终没把那一行认成目标行**。
+  **我们这条链是正确的**：`splitLocation` 解出 `line: 30` → `data-dsh-panel-body-line="30"` →
+  `sidebarRight.openResource(address, { params: { line: 30 } })`，全程没有转换或加偏移。
+  宿主侧的自相矛盾在 `dsh-client-ui-sidebar-documentpreview`：渲染侧
+  `const number = page.offset + index` 是 **0-based**，而负责揭示目标行的入口注释自称
+  **"1-based source line"**。这是上游的实现，改了下次 dsh 升级就丢 —— **所以我们不做补偿**
+  （补偿宿主 bug 有把正确情形也带偏的风险）。夹具那句"应跳到第 30 行附近"就是这个意思：
+  验收标准是**附近**，不是精确行。
 
 ## 探针实测结论（2026-09-25，真机）
 
@@ -182,11 +193,11 @@ md / html 里的路径有三种写法，语义不同，必须写死规则（否�
 
 第一版（`title` + 按扩展名注册 body + 子槽位组件；组件只 `console.log` 并返回 `null`）装上后：
 
-| 观察                                | 结果              | 事后判定                                                           |
-| ----------------------------------- | ----------------- | ------------------------------------------------------------------ |
-| 查看器按钮显示 `md · paths`         | ✅                | 定义确实被选中（header 里 `selected.title()`），不是"另一条路生效" |
-| 日志里 `[paths-probe] body invoked` | ❌ 一条没有       | **这条证据无效** —— 见「坑 ②」                                     |
-| 面板正文                            | 卡在「正在读取…」 | 真原因：定义漏了 `loading`（见下）                                 |
+| 观察                                     | 结果              | 事后判定                                                           |
+| ---------------------------------------- | ----------------- | ------------------------------------------------------------------ |
+| 查看器按钮显示 `md · paths`              | ✅                | 定义确实被选中（header 里 `selected.title()`），不是"另一条路生效" |
+| 日志里 `[panel-body-probe] body invoked` | ❌ 一条没有       | **这条证据无效** —— 见「坑 ②」                                     |
+| 面板正文                                 | 卡在「正在读取…」 | 真原因：定义漏了 `loading`（见下）                                 |
 
 「卡住」是真的，「日志没有」是假的。把这两件事当成一件事查，方向就偏了一整轮。
 
@@ -195,10 +206,10 @@ md / html 里的路径有三种写法，语义不同，必须写死规则（否�
 修正只有两处：定义里补 `loading` / `wrap`；日志改用 `console.warn`，并让组件**返回一段可见文字**。
 真机装进 `web` profile、重启 dsh、用 `reveal` 打开一个 `.md` 后：
 
-| 证据                                                                         | 结果               |
-| ---------------------------------------------------------------------------- | ------------------ |
-| 面板正文显示 `[paths-probe] body invoked · dsh-resource://…（content=text）` | ✅ **body 被调用** |
-| 组件只返回一个字符串、不引 React，面板就显示那一行（没有 React 报错）        | ✅ 组件契约成立    |
+| 证据                                                                              | 结果               |
+| --------------------------------------------------------------------------------- | ------------------ |
+| 面板正文显示 `[panel-body-probe] body invoked · dsh-resource://…（content=text）` | ✅ **body 被调用** |
+| 组件只返回一个字符串、不引 React，面板就显示那一行（没有 React 报错）             | ✅ 组件契约成立    |
 
 → **接管机制成立；父槽位不需要我们注册；子槽位 `key` 就是 body 定义的 id。**
 
@@ -261,25 +272,43 @@ content !== void 0 && renderSlot('sidebar.right.tab.document',
   所以**拿 `console.log` 当探针证据 = 永远看不到**。更糟的是实测（0.6.4 + Electron 44）
   那份 `logs/console.log` 自 13:35 起**一字未写**，连 `console.warn` 也没落盘 ——
   所以**最可靠的证据是面板正文**，不是日志。
-- **③ 探针组件一定要返回可见文字**：这次正是那行 `[paths-probe] body invoked · …` 在日志全哑的情况下
+- **③ 探针组件一定要返回可见文字**：这次正是那行 `[panel-body-probe] body invoked · …` 在日志全哑的情况下
   给出了决定性证据。只 `return null` 的话，就只能看到"面板变空"，无法与"没接管"区分。
 - 探针装着期间，**侧栏打开 md / html 会显示探针的占位文字**（地址被我们接管）。
   验完记得撤掉 profile 里那三处改动（依赖行 / bundles 末项 / `node_modules` 符号链接）。
 
 ## 正式实现真机跑通（2026-09-25，真机）
 
-`docs/fixtures/paths-demo.md` 逐条点过，全部符合预期：
+`docs/fixtures/panel-body-demo.md` 逐条点过，全部符合预期：
 
-| 验收点                                                                                   | 结果 |
-| ---------------------------------------------------------------------------------------- | ---- |
-| 查看器菜单出现 `Markdown · paths`（我们的定义被选中）                                    | ✅   |
-| 行内代码里的相对路径（`paths-demo.html`、`./paths-demo.css`）可点                        | ✅   |
-| 工作区根相对路径 + 行号（`dsh-plugins/packages/paths/src/plug.ts:30`）在右侧栏打开并定位 | ✅   |
-| Markdown 链接指向路径 → 右侧栏换内容（浏览器地址栏不动）                                 | ✅   |
-| `http(s)` 链接 → 交给系统浏览器                                                          | ✅   |
-| 代码块里的路径、`const x = 1`、`and/or`、`a.ts`、`https://…/x.md` **不可点**             | ✅   |
-| 不存在的路径 → 右侧栏显示"读不到"                                                        | ✅   |
-| HTML 预览：相对 CSS 生效、裸路径可点、`<a>` 按 url / path 分流                           | ✅   |
+| 验收点                                                                                        | 结果 |
+| --------------------------------------------------------------------------------------------- | ---- |
+| 查看器菜单出现 `Markdown · paths`（我们的定义被选中）                                         | ✅   |
+| 行内代码里的相对路径（`panel-body-demo.html`、`./panel-body-demo.css`）可点                   | ✅   |
+| 工作区根相对路径 + 行号（`dsh-plugins/packages/panel-body/src/plug.ts:30`）在右侧栏打开并定位 | ✅   |
+| Markdown 链接指向路径 → 右侧栏换内容（浏览器地址栏不动）                                      | ✅   |
+| `http(s)` 链接 → 交给系统浏览器                                                               | ✅   |
+| 代码块里的路径、`const x = 1`、`and/or`、`a.ts`、`https://…/x.md` **不可点**                  | ✅   |
+| 不存在的路径 → 右侧栏显示"读不到"                                                             | ✅   |
+| HTML 预览：相对 CSS 生效、裸路径可点、`<a>` 按 url / path 分流                                | ✅   |
+
+### ⚠️ 这张表当初漏了一格：`..` 越过工作区根（2026-09-26 真机撞上）
+
+上面「Markdown 链接指向路径」只验了**换内容**，没验**目标路径对不对**；而当时的夹具
+`panel-body-demo.md` 里的链接是**同目录**的 —— 于是「相对路径里的 `..`」整条路从没被走到。
+真机上第一例就挂了：`packages/panel-body/README.md` 里的 `../../docs/panel-path-links.md`
+打开成了 `packages/panel-body/docs/panel-path-links.md`（`..` 被当成普通目录名）。
+
+**成因**：插件用**工作区相对路径**拼候选、再用 `read` 探存在性，而 `read` 只认工作区内。
+相对路径经 `..` 越过工作区根后两个候选都探不到，于是退回第一条候选，
+把拼错的相对路径直接写进地址。
+
+**改法**：改用宿主 `workspaceFiles.stat`（它接受"绝对路径或工作区相对路径"，
+**工作区外也允许**）把候选解析成**绝对路径**，再按工作区外的写法造地址 ——
+**解析交给宿主，不自己拼字符串**。
+
+**教训（写下来免得再犯）**：验收表里写"换内容"不够，**要写清目标是什么**；
+夹具也要覆盖"跨目录 / 越过工作区根"这类边界，不能只有同目录那一种。
 
 ### 正式实现路上又踩的三个坑（比探针那轮更贵）
 
@@ -288,7 +317,7 @@ content !== void 0 && renderSlot('sidebar.right.tab.document',
 2. **`inject` 里放了一个"拿不到"的服务，fiber 就停在 INACTIVE，`apply` 根本不执行**，而且**完全静默**
    （cordis `_refresh()`：任一 inject 项没有 impl 就 `epoch = INACTIVE`，`_updateState` 直接卸载/不加载）。
    所以 `inject` 只放真硬依赖（本包是 `documentPreviews` / `slots`），其余走
-   `ctx.reflect.get(name, false)` 非严格读取（实现收在 `packages/paths/src/services.ts`）。
+   `ctx.reflect.get(name, false)` 非严格读取（实现收在 `packages/panel-body/src/services.ts`）。
 3. **嵌套服务名是独立的服务**：官方注入 `remote` _和_ `remote.workspaceFiles` 两个名字；
    只拿到 `remote` 那个面、再读它的 `.workspaceFiles`，一样触发第 1 条守卫。
 
@@ -306,7 +335,7 @@ content !== void 0 && renderSlot('sidebar.right.tab.document',
    （`--dump-config` 会重写 profile 的 `cordis.yml`；在 DSH 自己的沙箱里跑要放行工作区外的写。）
 
 5. **`console.log` 不是取证手段**（见「坑 ②」）。所以正式实现里保留了
-   **失败才会出现**的兜底：右下角一条红条 + `<html data-dsh-paths-failed>`；
+   **失败才会出现**的兜底：右下角一条红条 + `<html data-dsh-panel-body-failed>`；
    成功时界面干干净净。静默失败才是最贵的故障。
 
 ## 审计：优秀插件怎么做，我们改了什么（2026-09-25）
@@ -338,22 +367,22 @@ function u8(t){ try { switch(new URL(t).protocol){
 
 所以「换成官方 `MarkdownText` + `fileMentions`」只能覆盖**行内代码里的路径**，
 `[说明](docs/a.md)` 这类**指路径的链接会退回纯文本** —— 而那是这条线的明确需求。
-**这就是我们保留自研薄渲染器的唯一理由**（代价见 `packages/paths/README.md#已知降级`）；
+**这就是我们保留自研薄渲染器的唯一理由**（代价见 `packages/panel-body/README.md#已知降级`）；
 哪天只需要行内代码可点，就该切成官方 `MarkdownText`，能白拿 GFM/脚注/公式/代码复制按钮。
 
 ### 据此改的 9 处
 
-| #   | 问题（谁教的）                                                                                                            | 改法                                                                                                                                                                                                           |
-| --- | ------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | **每次滚动都在重解析整篇 Markdown**（官方是 `React.memo` + `useMemo`）                                                    | Markdown body 用 `useMemo`，同正文只解析一次                                                                                                                                                                   |
-| 2   | **没有错误边界**：渲染期抛错 → React 卸载整棵子树 → 白屏（`dshmarket` #293 白屏了几个月）                                 | 加 `PathsBoundary`，崩了显示原文；**工厂里定义**，模块求值不碰 `React.Component`                                                                                                                               |
-| 3   | 路径链接用了 `href="#"`：cmd/中键点击会让壳把**应用自身 URL** 交给系统浏览器                                              | 去掉 `href`（官方文件提及也是无 `href` 的 `<button>`）                                                                                                                                                         |
-| 4   | **文案硬编码**散在 4 个文件（`dshmarket` 一句都不硬编码）                                                                 | 集中到 `src/strings.ts`；将来接 `ctx.locale` 只改这个文件                                                                                                                                                      |
-| 5   | 宿主 react 缺导出会在**渲染时**炸                                                                                         | `apply` 先做能力自检（`missingReact`，对齐 `dshmarket` 的 `missingPrimitives`），缺就干净降级                                                                                                                  |
-| 6   | `slots.register` 返回值未必是 disposer（`dshmarket` 有兜底）                                                              | `asDisposer()` 收敛后再交给 `ctx.effect`                                                                                                                                                                       |
-| 7   | 可选服务读法是我自创的 `reflect.get(name,false)`                                                                          | 首选官方推荐的 **`ctx.get(name)`**（社区同款修法：静态 inject 塞可选服务会把整个 client boot 挂死）                                                                                                            |
-| 8   | 自造的 `dsh.client.hostRequires` 字段**在公开文档/代码里不存在**                                                          | 删掉；`check-dist` 改成按**宿主真实机制**判：静态模块表 ∪ `dsh.client.external`                                                                                                                                |
-| 9   | **裸文件名一律不认**，于是 `` `paths-demo.html` `` 点不动 —— 而**我们自己写的验收夹却把它列成"应该可点"**（真机一测就露） | 行内代码的裸文件名改成按**已知扩展名白名单**认：`index.ts` / `plug.ts:30` / `paths-demo.html` 认；`process.env` / `console.log` / `React.Component` / `1.5` 仍不认（`src/paths.ts` 的 `BARE_FILE_EXTENSIONS`） |
+| #   | 问题（谁教的）                                                                                                                 | 改法                                                                                                                                                                                                                |
+| --- | ------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | **每次滚动都在重解析整篇 Markdown**（官方是 `React.memo` + `useMemo`）                                                         | Markdown body 用 `useMemo`，同正文只解析一次                                                                                                                                                                        |
+| 2   | **没有错误边界**：渲染期抛错 → React 卸载整棵子树 → 白屏（`dshmarket` #293 白屏了几个月）                                      | 加 `PathsBoundary`，崩了显示原文；**工厂里定义**，模块求值不碰 `React.Component`                                                                                                                                    |
+| 3   | 路径链接用了 `href="#"`：cmd/中键点击会让壳把**应用自身 URL** 交给系统浏览器                                                   | 去掉 `href`（官方文件提及也是无 `href` 的 `<button>`）                                                                                                                                                              |
+| 4   | **文案硬编码**散在 4 个文件（`dshmarket` 一句都不硬编码）                                                                      | 集中到 `src/strings.ts`；将来接 `ctx.locale` 只改这个文件                                                                                                                                                           |
+| 5   | 宿主 react 缺导出会在**渲染时**炸                                                                                              | `apply` 先做能力自检（`missingReact`，对齐 `dshmarket` 的 `missingPrimitives`），缺就干净降级                                                                                                                       |
+| 6   | `slots.register` 返回值未必是 disposer（`dshmarket` 有兜底）                                                                   | `asDisposer()` 收敛后再交给 `ctx.effect`                                                                                                                                                                            |
+| 7   | 可选服务读法是我自创的 `reflect.get(name,false)`                                                                               | 首选官方推荐的 **`ctx.get(name)`**（社区同款修法：静态 inject 塞可选服务会把整个 client boot 挂死）                                                                                                                 |
+| 8   | 自造的 `dsh.client.hostRequires` 字段**在公开文档/代码里不存在**                                                               | 删掉；`check-dist` 改成按**宿主真实机制**判：静态模块表 ∪ `dsh.client.external`                                                                                                                                     |
+| 9   | **裸文件名一律不认**，于是 `` `panel-body-demo.html` `` 点不动 —— 而**我们自己写的验收夹却把它列成"应该可点"**（真机一测就露） | 行内代码的裸文件名改成按**已知扩展名白名单**认：`index.ts` / `plug.ts:30` / `panel-body-demo.html` 认；`process.env` / `console.log` / `React.Component` / `1.5` 仍不认（`src/paths.ts` 的 `BARE_FILE_EXTENSIONS`） |
 
 ### 顺带确认的两件事
 
