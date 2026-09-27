@@ -15,9 +15,9 @@ dsh plugin --profile web add @yozica/dsh-plugin-suite
 
 两种装法效果一样，**选一种**：
 
-| 你想要       | 装什么                                   | `dsh.profile.bundles` 里出现                          |
-| ------------ | ---------------------------------------- | ----------------------------------------------------- |
-| 全都要       | `@yozica/dsh-plugin-suite`               | 只有 `…-suite` 一个（两个插件是它的依赖，不各自成层） |
+| 你想要       | 装什么                                        | `dsh.profile.bundles` 里出现                          |
+| ------------ | --------------------------------------------- | ----------------------------------------------------- |
+| 全都要       | `@yozica/dsh-plugin-suite`                    | 只有 `…-suite` 一个（两个插件是它的依赖，不各自成层） |
 | 只要其中一个 | `@yozica/dsh-plugin-reveal` 或 `…-panel-body` | 那个包自己                                            |
 
 **为什么不能同时装**：统合包那层插的条目 id / name 与单包那份 patch **逐字一致**（都是 `reveal` / `panel-body`）。
@@ -37,10 +37,10 @@ dsh plugin --profile web add @yozica/dsh-plugin-suite
 
 ## 内容
 
-| 带进来的插件                | 干什么                                                                   | 它的入口 |
-| --------------------------- | ------------------------------------------------------------------------ | -------- |
-| `@yozica/dsh-plugin-reveal` | 给 agent 一个 `reveal(path[, line])` 工具：在右侧栏把文件摊开给人看      | 工具     |
-| `@yozica/dsh-plugin-panel-body`  | 侧栏内容里的文件路径可点（Markdown / HTML 正文接管；http(s) 交给浏览器） | 界面     |
+| 带进来的插件                    | 干什么                                                                   | 它的入口 |
+| ------------------------------- | ------------------------------------------------------------------------ | -------- |
+| `@yozica/dsh-plugin-reveal`     | 给 agent 一个 `reveal(path[, line])` 工具：在右侧栏把文件摊开给人看      | 工具     |
+| `@yozica/dsh-plugin-panel-body` | 侧栏内容里的文件路径可点（Markdown / HTML 正文接管；http(s) 交给浏览器） | 界面     |
 
 细节看各自的 README：`packages/reveal/README.md`、`packages/panel-body/README.md`。
 

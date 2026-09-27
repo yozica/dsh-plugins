@@ -82,13 +82,21 @@ function createGuard(
       } catch {
         /* 标记失败无所谓 */
       }
-      console.error('[dsh-plugin-panel-body] 渲染崩溃，已退回显示原文', error, info?.componentStack);
+      console.error(
+        '[dsh-plugin-panel-body] 渲染崩溃，已退回显示原文',
+        error,
+        info?.componentStack,
+      );
     }
 
     render(): unknown {
       if (this.state.error === null) return this.props.children;
       return createElement('div', { 'data-dsh-panel-body-crashed': true }, [
-        createElement('p', { key: 'note', className: 'dsh-panel-body-status' }, STRINGS.renderCrash),
+        createElement(
+          'p',
+          { key: 'note', className: 'dsh-panel-body-status' },
+          STRINGS.renderCrash,
+        ),
         this.props.fallback,
       ]);
     }

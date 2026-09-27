@@ -184,7 +184,11 @@ function createMarkdownBody(deps: RegisterDeps): (props: BodyProps) => unknown {
 /** "退回原文"那个 `<pre>`；连它都建不出来（h 本身有问题）就返回 null，别在 try 外抛 */
 function makeFallback(h: H, source: string): unknown {
   try {
-    return h('pre', { className: 'dsh-panel-body-pre', 'data-dsh-panel-body-fallback': true }, source);
+    return h(
+      'pre',
+      { className: 'dsh-panel-body-pre', 'data-dsh-panel-body-fallback': true },
+      source,
+    );
   } catch {
     return null;
   }

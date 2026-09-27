@@ -44,7 +44,10 @@ function render(source: string): { tree: unknown; opened: [PathTarget, PathSourc
 
 test('行内代码里的路径渲染成可点元素，并带行号', () => {
   const { tree } = render('看这个 `src/a.ts:12` 文件');
-  const targets = findAll(tree, (element) => element.props['data-dsh-panel-body-target'] === 'src/a.ts');
+  const targets = findAll(
+    tree,
+    (element) => element.props['data-dsh-panel-body-target'] === 'src/a.ts',
+  );
   assert.equal(targets.length, 1);
   const target = targets[0] as Element;
   assert.equal(target.type, 'code');
@@ -93,7 +96,10 @@ test('链接文字是反引号路径时：点击目标是 href，链接文字不
   const links = findAll(tree, (element) => element.props['data-dsh-panel-body-kind'] === 'link');
   assert.equal(links.length, 1);
   const anchor = links[0] as Element;
-  assert.equal(anchor.props['data-dsh-panel-body-target'], '../../docs/fixtures/panel-body-demo.md');
+  assert.equal(
+    anchor.props['data-dsh-panel-body-target'],
+    '../../docs/fixtures/panel-body-demo.md',
+  );
 
   // 关键：`<a>` 里不许再有第二个可点元素（那正是以前吃掉点击的那个）
   const nested = findAll(
