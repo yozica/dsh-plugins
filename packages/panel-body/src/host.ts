@@ -4,7 +4,7 @@
  * 不 import `@deepseek-ai/*` 的类型：包要能发到公共源、谁的 DSH 都能装。这里抄的是
  * DSH 0.1.5-rc.2 上核对过的形状，上游改了就在这一处改。
  *
- * @module @yozica/dsh-plugin-paths/host
+ * @module @yozica/dsh-plugin-panel-body/host
  */
 
 /** 官方 `TextPreview` 支持的两种读取方式；body 定义必须与内容形态一致 */

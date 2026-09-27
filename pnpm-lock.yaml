@@ -29,7 +29,7 @@ importers:
 
   packages/kit: {}
 
-  packages/paths:
+  packages/panel-body:
     dependencies:
       '@yozica/dsh-plugin-kit':
         specifier: workspace:*
@@ -43,9 +43,9 @@ importers:
 
   packages/suite:
     dependencies:
-      '@yozica/dsh-plugin-paths':
+      '@yozica/dsh-plugin-panel-body':
         specifier: workspace:*
-        version: link:../paths
+        version: link:../panel-body
       '@yozica/dsh-plugin-reveal':
         specifier: workspace:*
         version: link:../reveal

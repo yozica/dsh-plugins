@@ -12,7 +12,7 @@
  * | 正文里的裸路径词           | ❌     | 误报代价高（`a.com`、`and/or` 都会中）            |
  * | `http(s):` / `mailto:` 等  | ❌     | 走 `classifyHref` → 交给浏览器                    |
  *
- * @module @yozica/dsh-plugin-paths/paths
+ * @module @yozica/dsh-plugin-panel-body/paths
  */
 import { isWindowsStylePath } from '@yozica/dsh-plugin-kit/client';
 

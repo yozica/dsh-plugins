@@ -64,15 +64,15 @@ pnpm build && pnpm test:only && pnpm check:dist    # 产物形状不对就别发
 ```
 packages/kit/        公共件：工具定义构造器、地址语法、SSE 频道、客户端包装、能力断言（零 @deepseek-ai 依赖）
 packages/reveal/     第一个插件：reveal(path) —— 在右侧栏打开文件给人看
-packages/paths/      第二个插件：侧栏里的文件路径可点（Markdown / HTML 正文接管）
-packages/suite/      统合包：一个 bundle 装齐 reveal + paths（**与单包二选一**，见它的 README）
+packages/panel-body/      第二个插件：侧栏里的文件路径可点（Markdown / HTML 正文接管）
+packages/suite/      统合包：一个 bundle 装齐 reveal + panel-body（**与单包二选一**，见它的 README）
 scripts/             build-client（esbuild + loader 包装）/ check-dist / install-dev / pack-all
 docs/                架构、契约、交接
 ```
 
 ## 统合包与单包：二选一
 
-`@yozica/dsh-plugin-suite` 只是把 `reveal` + `paths` 的 loader 条目**一起插进一个层**，两个插件是它的依赖。
+`@yozica/dsh-plugin-suite` 只是把 `reveal` + `panel-body` 的 loader 条目**一起插进一个层**，两个插件是它的依赖。
 所以「全都要」装统合包、「只要一个」装那个单包 —— 但**不要同时装**：统合包插的条目 id 与单包那份 patch 逐字一致，
 同时装会让同一个 id 进两次，dsh 启动时 `cordis-plugin-loader` 会
 `throw new TypeError('duplicate loader entry id: …')`。

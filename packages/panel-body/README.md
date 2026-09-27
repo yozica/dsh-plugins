@@ -1,4 +1,4 @@
-# @yozica/dsh-plugin-paths
+# @yozica/dsh-plugin-panel-body
 
 让 **DSH 侧栏里看到的东西可点**：Markdown / HTML 内容里的**文件路径**点了在侧栏打开，
 **http(s) 链接**点了交给浏览器。
@@ -8,7 +8,7 @@
 | 包              | 负责                                                |
 | --------------- | --------------------------------------------------- |
 | `reveal`        | **agent 主动**把东西摊到侧栏（工具 → 右栏打开资源） |
-| `paths`（本包） | 侧栏里**内容自己**可点（接管 md / html 的 body）    |
+| `panel-body`（本包） | 侧栏里**内容自己**可点（接管 md / html 的 body）    |
 
 ## 状态
 
@@ -21,7 +21,7 @@
 | 其它文件 | 不认领，官方 body 原样生效                                                                                        |
 
 机制、真机实证与踩坑：[`docs/panel-path-links.md`](../../docs/panel-path-links.md)。
-手动验收夹：[`docs/fixtures/paths-demo.md`](../../docs/fixtures/paths-demo.md)（配 `paths-demo.html` + 相对 css/js）。
+手动验收夹：[`docs/fixtures/panel-body-demo.md`](../../docs/fixtures/panel-body-demo.md)（配 `panel-body-demo.html` + 相对 css/js）。
 
 ### 三条不能忘的机制
 
@@ -62,7 +62,7 @@
 - **路径只从两处识别**：行内代码、指向路径的 Markdown 链接。正文里的"裸路径词"不识别
   （`a.com`、`and/or` 这类误报代价太高）；
 - 行内代码里的**路径不能带空格**（`src/my file.ts` 不认，已知限制）；
-- **裸文件名**（无目录）只在扩展名进**白名单**时认：`index.ts`、`paths-demo.html` 认，
+- **裸文件名**（无目录）只在扩展名进**白名单**时认：`index.ts`、`panel-body-demo.html` 认，
   `process.env` / `console.log` / `React.Component` / `1.5` 不认（白名单见 `src/paths.ts` 的
   `BARE_FILE_EXTENSIONS`）。带目录的写法（`src/whatever.env`）则宽松；Markdown 链接里一律按意图认。
 - 分页读（`text-pages`）下，未闭合的围栏按"后面都是代码"处理。
@@ -91,7 +91,7 @@
    （并留一个 `package.json.bak-<时间戳>` 备份）。**不用重启**就能查：
 
    ```bash
-   dsh --profile web --dump-config | grep -B1 -A1 dsh-plugin-paths
+   dsh --profile web --dump-config | grep -B1 -A1 dsh-plugin-panel-body
    ```
 
    不在输出里 = 压根没进 profile；去 `~/.dsh/profiles/web/package.json` 的 `dsh.profile.bundles` 补回来即可。
@@ -124,7 +124,7 @@
 ## 安装（本地开发）
 
 ```bash
-dsh plugin --profile web add link:/绝对路径/dsh-plugins/packages/paths
+dsh plugin --profile web add link:/绝对路径/dsh-plugins/packages/panel-body
 ```
 
 改代码后：`pnpm build` → **重启 dsh**（浏览器半边在页面加载时注入）。
@@ -132,8 +132,8 @@ dsh plugin --profile web add link:/绝对路径/dsh-plugins/packages/paths
 ## 测试
 
 ```bash
-pnpm --filter @yozica/dsh-plugin-paths test    # 路径识别 / Markdown / 渲染产物 / 桥脚本 / 目标解析 / 注册契约
+pnpm --filter @yozica/dsh-plugin-panel-body test    # 路径识别 / Markdown / 渲染产物 / 桥脚本 / 目标解析 / 注册契约
 pnpm check:dist                                 # 产物形状 + host require 白名单
 ```
 
-真机验收走 `docs/fixtures/paths-demo.md`。
+真机验收走 `docs/fixtures/panel-body-demo.md`。

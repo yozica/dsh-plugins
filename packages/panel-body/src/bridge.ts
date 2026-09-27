@@ -10,12 +10,12 @@
  *   由 iframe 自己 `URL.createObjectURL` 替换；
  * - 引导脚本先 `document.write` 原始 HTML，再装桥：拦 `<a>` 点击 + 把文本里的路径包成可点。
  *
- * @module @yozica/dsh-plugin-paths/bridge
+ * @module @yozica/dsh-plugin-panel-body/bridge
  */
 import { INLINE_PATH_PATTERN } from './paths.js';
 
 /** 父组件用来辨认自己 iframe 的帧标记 */
-export const BRIDGE_SOURCE = 'dsh-plugin-paths';
+export const BRIDGE_SOURCE = 'dsh-plugin-panel-body';
 
 /** 一份随 HTML 一起搬进 iframe 的静态资源 */
 export interface HtmlAsset {

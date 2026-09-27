@@ -46,9 +46,9 @@ test('相对路径：文件目录没有就退到"工作区根"', async () => {
 });
 
 /**
- * 这一格就是真机上漏掉的：`packages/paths/README.md` 里的 `../../docs/panel-path-links.md`。
+ * 这一格就是真机上漏掉的：`packages/panel-body/README.md` 里的 `../../docs/panel-path-links.md`。
  * 相对路径经 `..` **越过工作区根**时，只有宿主解析得对；以前用 `read` 探测两个候选都返回假，
- * 于是退回第一条候选、拿拼错的相对路径去造地址（地址里留下 `packages/paths/docs/…`）。
+ * 于是退回第一条候选、拿拼错的相对路径去造地址（地址里留下 `packages/panel-body/docs/…`）。
  */
 test('相对路径越过工作区根：用宿主解析出的绝对路径，不再拿拼错的相对路径', async () => {
   const seen: string[] = [];
@@ -56,7 +56,7 @@ test('相对路径越过工作区根：用宿主解析出的绝对路径，不�
   await openFileTarget(
     {
       sessionId: 's1',
-      filePath: 'dsh-plugins/packages/paths/README.md',
+      filePath: 'dsh-plugins/packages/panel-body/README.md',
       resolve: async (path) => {
         seen.push(path);
         // 工作区根是 `/ws`：第一个候选解析到工作区**外**的绝对路径

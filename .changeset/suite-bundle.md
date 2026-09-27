@@ -1,7 +1,7 @@
 ---
 '@yozica/dsh-plugin-suite': minor
 '@yozica/dsh-plugin-kit': patch
-'@yozica/dsh-plugin-paths': patch
+'@yozica/dsh-plugin-panel-body': patch
 '@yozica/dsh-plugin-reveal': patch
 ---
 

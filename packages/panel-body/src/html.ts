@@ -7,7 +7,7 @@
  * 这里是**尽力而为**，任何一步失败都只降级、不抛：
  * 资源读不到 → 那一份不打包（正文照常显示）；不是 UTF-8 文本 → 交给上层的错误兜底。
  *
- * @module @yozica/dsh-plugin-paths/html
+ * @module @yozica/dsh-plugin-panel-body/html
  */
 
 /** 一份资源的上限（与官方同量级，避免被一个巨型依赖拖死） */

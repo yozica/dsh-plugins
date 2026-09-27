@@ -15,5 +15,5 @@
     - id: reveal
       name: '@yozica/dsh-plugin-reveal'
 
-    - id: paths
-      name: '@yozica/dsh-plugin-paths'
+    - id: panel-body
+      name: '@yozica/dsh-plugin-panel-body'

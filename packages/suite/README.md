@@ -1,6 +1,6 @@
 # @yozica/dsh-plugin-suite
 
-**统合包**：一个 bundle 装齐 `reveal` + `paths`。它自己不写代码 —— 只有一个 manifest 和一份 patch，
+**统合包**：一个 bundle 装齐 `reveal` + `panel-body`。它自己不写代码 —— 只有一个 manifest 和一份 patch，
 把两个插件的 loader 条目一起插进来；两个插件作为它的依赖被带进去。
 
 ## 装
@@ -20,7 +20,7 @@ dsh plugin --profile web add @yozica/dsh-plugin-suite
 | 全都要       | `@yozica/dsh-plugin-suite`               | 只有 `…-suite` 一个（两个插件是它的依赖，不各自成层） |
 | 只要其中一个 | `@yozica/dsh-plugin-reveal` 或 `…-paths` | 那个包自己                                            |
 
-**为什么不能同时装**：统合包那层插的条目 id / name 与单包那份 patch **逐字一致**（都是 `reveal` / `paths`）。
+**为什么不能同时装**：统合包那层插的条目 id / name 与单包那份 patch **逐字一致**（都是 `reveal` / `panel-body`）。
 同时装 ⇒ 同一个 id 在组合结果里出现两次 ⇒ dsh 启动时
 `@deepseek-ai/cordis-plugin-loader` 直接
 `throw new TypeError('duplicate loader entry id: …')`，**这个 profile 就起不来了**。
@@ -40,9 +40,9 @@ dsh plugin --profile web add @yozica/dsh-plugin-suite
 | 带进来的插件                | 干什么                                                                   | 它的入口 |
 | --------------------------- | ------------------------------------------------------------------------ | -------- |
 | `@yozica/dsh-plugin-reveal` | 给 agent 一个 `reveal(path[, line])` 工具：在右侧栏把文件摊开给人看      | 工具     |
-| `@yozica/dsh-plugin-paths`  | 侧栏内容里的文件路径可点（Markdown / HTML 正文接管；http(s) 交给浏览器） | 界面     |
+| `@yozica/dsh-plugin-panel-body`  | 侧栏内容里的文件路径可点（Markdown / HTML 正文接管；http(s) 交给浏览器） | 界面     |
 
-细节看各自的 README：`packages/reveal/README.md`、`packages/paths/README.md`。
+细节看各自的 README：`packages/reveal/README.md`、`packages/panel-body/README.md`。
 
 ## 加插件进统合包
 

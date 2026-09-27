@@ -27,7 +27,7 @@
     "prepack": "node -e \"\""
   },
   "dependencies": {
-    "@yozica/dsh-plugin-paths": "workspace:*",
+    "@yozica/dsh-plugin-panel-body": "workspace:*",
     "@yozica/dsh-plugin-reveal": "workspace:*"
   }
 }

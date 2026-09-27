@@ -6,7 +6,7 @@
     <!-- 相对样式：能看出红标题 = 我们的相对资源打包生效了 -->
     <link
       rel="stylesheet"
-      href="paths-demo.css"
+      href="panel-body-demo.css"
     />
   </head>
   <body>
@@ -16,7 +16,7 @@
 
     <p>
       相对链接（应作为**文件路径**在右侧栏打开，而不是页面跳走）：
-      <a href="paths-demo.md">paths-demo.md</a>
+      <a href="panel-body-demo.md">panel-body-demo.md</a>
     </p>
 
     <p>
@@ -24,15 +24,15 @@
       <a href="../panel-path-links.md">../panel-path-links.md</a>
     </p>
 
-    <p>裸路径文本（桥脚本应把它包成可点）：dsh-plugins/packages/paths/src/paths.ts</p>
+    <p>裸路径文本（桥脚本应把它包成可点）：dsh-plugins/packages/panel-body/src/paths.ts</p>
 
-    <p>多段裸路径：dsh-plugins/packages/paths/src/plug.ts:30</p>
+    <p>多段裸路径：dsh-plugins/packages/panel-body/src/plug.ts:30</p>
 
     <p>页内锚点（应正常跳转、不该当路径）：<a href="#late">跳到下面</a></p>
 
     <p id="late">下面这段由相对脚本注入（测 MutationObserver 的路径包裹）：</p>
     <div id="slot"></div>
 
-    <script src="paths-demo.js"></script>
+    <script src="panel-body-demo.js"></script>
   </body>
 </html>

@@ -25,7 +25,7 @@
  * 再退到 `ctx.reflect.get(name, false)`。拿不到返回 `undefined`，不抛、也不影响 fiber 激活。
  * **永远不要直接写 `ctx.xxx`。**
  *
- * @module @yozica/dsh-plugin-paths/browser
+ * @module @yozica/dsh-plugin-panel-body/browser
  */
 import { parseSessionFileAddress } from '@yozica/dsh-plugin-kit/client';
 import * as React from 'react';
@@ -39,7 +39,7 @@ import { STRINGS } from './strings.js';
 import { ensureStyles } from './styles.js';
 import { openFileTarget } from './target.js';
 
-export const name = 'plugin-paths';
+export const name = 'plugin-panel-body';
 
 /** 只有这两个是硬依赖：没有它们，注册 body / 组件这件事根本无从谈起。 */
 export const inject = ['documentPreviews', 'slots'];
@@ -82,7 +82,7 @@ function createGuard(
       } catch {
         /* 标记失败无所谓 */
       }
-      console.error('[dsh-plugin-paths] 渲染崩溃，已退回显示原文', error, info?.componentStack);
+      console.error('[dsh-plugin-panel-body] 渲染崩溃，已退回显示原文', error, info?.componentStack);
     }
 
     render(): unknown {
@@ -291,6 +291,6 @@ function openExternal(ctx: PathsContext, url: string): void {
   try {
     window.open(url, '_blank', 'noopener,noreferrer');
   } catch (error) {
-    ctx.logger?.warn('[dsh-plugin-paths] 打开外链失败：', error);
+    ctx.logger?.warn('[dsh-plugin-panel-body] 打开外链失败：', error);
   }
 }

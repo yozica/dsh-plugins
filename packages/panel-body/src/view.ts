@@ -2,7 +2,7 @@
  * AST → 元素树。**不 import React**：`createElement` 由调用方注入（`browser.ts` 传宿主的 React，
  * 测试传一个假的 `h`），这样渲染逻辑能在 Node 里断言，也避免为了一个探针把 React 拖进单测。
  *
- * @module @yozica/dsh-plugin-paths/view
+ * @module @yozica/dsh-plugin-panel-body/view
  */
 import { parseMarkdown, type Block, type Inline } from './markdown.js';
 import { classifyHref, classifyPathToken, type PathTarget } from './paths.js';

@@ -10,7 +10,7 @@
  *
  * 存在性检查是**尽力而为**：拿不到 `remote.workspaceFiles` 时不做检查，直接按规则 1 打开。
  *
- * @module @yozica/dsh-plugin-paths/target
+ * @module @yozica/dsh-plugin-panel-body/target
  */
 import { fileAddressFor, isWindowsStylePath } from '@yozica/dsh-plugin-kit/client';
 

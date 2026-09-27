@@ -6,9 +6,9 @@
  *
  * 注入方式与官方插件一致：一个带 `data-plugin-css` 的 `<style>`，同一份只插一次。
  *
- * @module @yozica/dsh-plugin-paths/styles
+ * @module @yozica/dsh-plugin-panel-body/styles
  */
-export const STYLE_ID = '@yozica/dsh-plugin-paths/styles';
+export const STYLE_ID = '@yozica/dsh-plugin-panel-body/styles';
 
 export const STYLES = `
 .dsh-paths-document {
@@ -107,7 +107,7 @@ export function ensureStyles(): void {
   if (typeof document === 'undefined') return;
   if (document.querySelector(`style[data-plugin-css="${STYLE_ID}"]`) !== null) return;
   const tag = document.createElement('style');
-  tag.dataset.plugin = '@yozica/dsh-plugin-paths';
+  tag.dataset.plugin = '@yozica/dsh-plugin-panel-body';
   tag.dataset.pluginCss = STYLE_ID;
   tag.textContent = STYLES;
   document.head.appendChild(tag);

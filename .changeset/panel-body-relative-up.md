@@ -1,10 +1,10 @@
 ---
-'@yozica/dsh-plugin-paths': patch
+'@yozica/dsh-plugin-panel-body': patch
 ---
 
 修「侧栏正文里的相对路径有的点不开」：**跨目录的相对路径**（`../x.md`、`../../docs/x.md`）
-此前会解析到不存在的地址。真机现象是把 `packages/paths/README.md` 里的
-`../../docs/panel-path-links.md` 打开成 `packages/paths/docs/panel-path-links.md`。
+此前会解析到不存在的地址。真机现象是把 `packages/panel-body/README.md` 里的
+`../../docs/panel-path-links.md` 打开成 `packages/panel-body/docs/panel-path-links.md`。
 
 两处成因，都在我们这边：
 
@@ -21,7 +21,7 @@
    于是用的是**链接文字**而不是 href。现在指向路径的链接**目标只认 href**，
    链接文字只作展示（显示照旧保留反引号）。
 
-验证：`packages/paths` 单测 44 个（含新增 3 个：越过工作区根、链接文字不再单独可点、
+验证：`packages/panel-body` 单测 44 个（含新增 3 个：越过工作区根、链接文字不再单独可点、
 两个候选都解析不到时的兜底）；离线用构建产物逐条跑过验收夹具
-`docs/fixtures/paths-demo.md` 的 7 条链接，全部解析到真实存在的目标；
+`docs/fixtures/panel-body-demo.md` 的 7 条链接，全部解析到真实存在的目标；
 真机上该夹具里的链接逐条点过，都能打开。

@@ -9,7 +9,7 @@
  * - body 定义**必须带 `loading`**：`text-pages` 给 Markdown（分页读文本），
  *   `bytes-complete` 给 HTML（一次读完整字节）；漏了它官方 TextPreview 不读文件、也不 renderSlot。
  *
- * @module @yozica/dsh-plugin-paths/plug
+ * @module @yozica/dsh-plugin-panel-body/plug
  */
 import { BRIDGE_SOURCE, frameDocument } from './bridge.js';
 import type { DocumentPreviewDefinition, PathsContext } from './host.js';
@@ -92,7 +92,7 @@ export function registerBodies(ctx: PathsContext, deps: RegisterDeps): void {
   ];
 
   for (const target of targets) {
-    const id = `plugin-paths:${target.suffix}`;
+    const id = `plugin-panel-body:${target.suffix}`;
     const definition: DocumentPreviewDefinition = {
       id,
       extensions: target.extensions,

@@ -22,7 +22,7 @@ test('行内代码：相对路径要带扩展名（避免 `and/or`、`a.ts` 误�
 
   // 裸文件名：扩展名在白名单里就认（`index.ts:30` 很常见），不在就拒（防 process.env 这类）
   assert.deepEqual(classifyPathToken('a.ts'), { path: 'a.ts' });
-  assert.deepEqual(classifyPathToken('paths-demo.html'), { path: 'paths-demo.html' });
+  assert.deepEqual(classifyPathToken('panel-body-demo.html'), { path: 'panel-body-demo.html' });
   assert.deepEqual(classifyPathToken('plug.ts:30'), { path: 'plug.ts', line: 30 });
   assert.equal(classifyPathToken('process.env'), null, '属性名不是路径');
   assert.equal(classifyPathToken('console.log'), null);
