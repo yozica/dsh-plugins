@@ -277,8 +277,8 @@ python3 -c "import json;print(json.load(open('$HOME/.dsh/profiles/web/package.js
 
 - **仓库**：`github.com/yozica/dsh-plugins`，**private**，默认分支 `main`。
   目前是旧结构 + 一个"内容干净但历史里有旧对象"的状态 —— 按决定 G **删掉重建**。
-- **git 身份**：这台机器的**全局**身份是另一个（工作用）身份，**不要用它提交**；
-  开工前先在仓内钉住本项目该用的身份：
+- **git 身份**：**一律在仓内钉住**本项目该用的身份，不要依赖全局配置
+  （换一台机器、或本机全局身份是别处的配置时，提交就会带错身份）：
 
   ```bash
   git config --local user.name  <GitHub 用户名>
@@ -303,7 +303,6 @@ python3 -c "import json;print(json.load(open('$HOME/.dsh/profiles/web/package.js
 | ----------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
 | 现有插件实现（参考实现，含服务端/客户端/单测/README/bundle 补丁） | `<本仓>/packages/reveal/`（若沿用旧目录则是 `dsh-plugin-reveal/`）                                                            |
 | 已装进本机 profile                                                | `~/.dsh/profiles/web` 的 `dependencies` 里是 `link:` 到本仓 `packages/reveal`；`dsh.profile.bundles` 里有 `dsh-plugin-reveal` |
-| 本机环境                                                          | macOS / Node 24（nvm）/ pnpm 10.15.0 / DSH 0.1.5-rc.2                                                                         |
 | 待办                                                              | 删旧仓 → 重建 → 推；之后按 §5 逐步实现                                                                                        |
 
 **不要动**：`dsh-console` 那个仓（另一个项目，有 3 个未合并的 PR）。本项目的改动只在本仓。
