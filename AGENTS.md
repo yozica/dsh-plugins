@@ -15,6 +15,13 @@
 - 包名 `@yozica/dsh-plugin-*`、只发官方源、`publishConfig.access = "public"`（决定 A）。
 - 客户端半边由 esbuild 打成 `lib/client.js` + loader 包装（`scripts/build-client.mjs`），宿主包标 external（决定 D）。
 - **测试跑的是构建产物** ⇒ 先 `pnpm build`（`pnpm test` 已经包含构建，只跑测试用 `pnpm test:only`）。
+- **插件要留"外面看得见"的证据，用 `console.warn` / `console.error`，不要只靠 `ctx.logger`**（2026-09-27 定）：
+  `ctx.logger` 是 cordis 的 exporter 模型，浏览器侧那个 exporter 只把消息 push 进**内存环形缓冲**
+  （dsh 既没有日志面板、也不落盘）—— 写进去等于没人看得见。`console.*` 至少进浏览器控制台，而
+  **在 DSH Console 里**宿主会把 guest 的 warning/error 抓进 `%APPDATA%\DSH Console\logs\console.log`
+  （`log` / `info` 级别不转发）。`panel-body` 里统一走 `report()` helper 做双写，新代码照它接。
+  > 相关：console 那条抓取链曾因 `readConsoleMessage()` 参数错位把所有消息读成空串而**全丢**
+  > （2026-09-27 修，console 仓新增 4 条断言钉住形状）。
 - **只动本仓**：`dsh-console` 是另一个项目。提交里不写公司信息、不写本机绝对路径与用户名；
   **提交身份一律在仓内钉住**（`git config --local`），不要依赖全局配置 —— 换机器、或本机全局
   身份是别处的配置时，提交就会带错身份。

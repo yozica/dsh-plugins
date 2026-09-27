@@ -183,6 +183,31 @@ function workspaceFilesOf(ctx: PathsContext): WorkspaceFilesLike | undefined {
   }
 }
 
+/**
+ * 诊断出口：**双写** `console.warn` 与 `ctx.logger`。
+ *
+ * 为什么不能只用 `ctx.logger`：它是 cordis 的 exporter 模型，浏览器侧那个 exporter 只把消息
+ * push 进**内存环形缓冲**（既没有日志面板、也不落盘）—— 也就是说写进去没人看得见。
+ * 而 `console.warn/error` 会进浏览器控制台；**在 DSH Console 里**那条控制台消息会被宿主抓下来，
+ * 落进 `%APPDATA%\DSH Console\logs\console.log`（前提是 console 那边的 `console-message`
+ * 读取正常 —— 它曾经因为参数错位把每条消息读成空串而全丢，2026-09-27 修）。
+ *
+ * 两条都写：换任何宿主跑，至少浏览器控制台里有一份；在 Console 里还多一份落盘。
+ * 传入的 message 由调用方自带 `[dsh-plugin-panel-body]` 前缀（`STRINGS` 里已经是这个形状）。
+ */
+function report(ctx: PathsContext, message: string, ...details: unknown[]): void {
+  try {
+    globalThis.console?.warn(message, ...details);
+  } catch {
+    // 控制台都写不了（不该发生）—— 不能让诊断本身把功能带崩
+  }
+  try {
+    ctx.logger?.warn(message, ...details);
+  } catch {
+    // 同上
+  }
+}
+
 export function apply(ctx: PathsContext): void {
   // 挂载失败**不许**拖垮界面：宿主会把 apply 抛错渲染成整页 "Failed to load plugins"，
   // 而我们失败时正文交回官方 body 就行（少一个能力，不是坏一个页面）。
@@ -191,7 +216,7 @@ export function apply(ctx: PathsContext): void {
     // 而不是注册一个渲染时才炸的 body。
     const gaps = missingReact(React as unknown as Record<string, unknown>);
     if (gaps.length > 0) {
-      ctx.logger?.warn(`${STRINGS.missingReact}${gaps.join(', ')}`);
+      report(ctx, `${STRINGS.missingReact}${gaps.join(', ')}`);
       return;
     }
     registerBodies(ctx, {
@@ -216,7 +241,7 @@ export function apply(ctx: PathsContext): void {
     ensureStyles();
   } catch (error) {
     reportFailure(error);
-    ctx.logger?.warn(STRINGS.mountFailedLog, error);
+    report(ctx, STRINGS.mountFailedLog, error);
   }
 }
 
@@ -271,14 +296,14 @@ async function openTarget(
 ): Promise<void> {
   const sidebar = sidebarRightOf(ctx);
   if (sidebar === undefined) {
-    ctx.logger?.warn(STRINGS.noSidebarService);
+    report(ctx, STRINGS.noSidebarService);
     return;
   }
   const address = origin.resourceAddress;
   const reference =
     typeof address === 'string' && address !== '' ? parseSessionFileAddress(address) : null;
   if (reference === null) {
-    ctx.logger?.warn(STRINGS.notSessionAddress, address);
+    report(ctx, STRINGS.notSessionAddress, address);
     return;
   }
   await openFileTarget(
@@ -299,6 +324,6 @@ function openExternal(ctx: PathsContext, url: string): void {
   try {
     window.open(url, '_blank', 'noopener,noreferrer');
   } catch (error) {
-    ctx.logger?.warn('[dsh-plugin-panel-body] 打开外链失败：', error);
+    report(ctx, '[dsh-plugin-panel-body] 打开外链失败：', error);
   }
 }
