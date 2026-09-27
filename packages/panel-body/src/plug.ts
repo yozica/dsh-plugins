@@ -184,7 +184,7 @@ function createMarkdownBody(deps: RegisterDeps): (props: BodyProps) => unknown {
 /** "退回原文"那个 `<pre>`；连它都建不出来（h 本身有问题）就返回 null，别在 try 外抛 */
 function makeFallback(h: H, source: string): unknown {
   try {
-    return h('pre', { className: 'dsh-paths-pre', 'data-dsh-paths-fallback': true }, source);
+    return h('pre', { className: 'dsh-panel-body-pre', 'data-dsh-panel-body-fallback': true }, source);
   } catch {
     return null;
   }
@@ -279,7 +279,7 @@ function createHtmlBody(deps: RegisterDeps): (props: BodyProps) => unknown {
     if (state.status !== 'ready') {
       const status = h(
         'p',
-        { className: 'dsh-paths-status', 'data-dsh-paths-state': state.status },
+        { className: 'dsh-panel-body-status', 'data-dsh-panel-body-state': state.status },
         state.status === 'error' ? STRINGS.htmlFailed : STRINGS.htmlLoading,
       );
       return guardWith(deps, status, status);
@@ -288,15 +288,15 @@ function createHtmlBody(deps: RegisterDeps): (props: BodyProps) => unknown {
       deps,
       h('iframe', {
         ref: frameRef,
-        className: 'dsh-paths-frame',
+        className: 'dsh-panel-body-frame',
         sandbox: 'allow-scripts',
         srcDoc: state.srcDoc,
         title: STRINGS.htmlFrame,
-        'data-dsh-paths-frame': true,
+        'data-dsh-panel-body-frame': true,
       }),
       h(
         'p',
-        { className: 'dsh-paths-status', 'data-dsh-paths-state': 'crashed' },
+        { className: 'dsh-panel-body-status', 'data-dsh-panel-body-state': 'crashed' },
         STRINGS.htmlFailed,
       ),
     );

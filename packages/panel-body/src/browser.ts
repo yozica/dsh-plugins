@@ -78,7 +78,7 @@ function createGuard(
 
     componentDidCatch(error: Error, info?: { componentStack?: string | null }): void {
       try {
-        document.documentElement.setAttribute('data-dsh-paths-crashed', error.message);
+        document.documentElement.setAttribute('data-dsh-panel-body-crashed', error.message);
       } catch {
         /* 标记失败无所谓 */
       }
@@ -87,8 +87,8 @@ function createGuard(
 
     render(): unknown {
       if (this.state.error === null) return this.props.children;
-      return createElement('div', { 'data-dsh-paths-crashed': true }, [
-        createElement('p', { key: 'note', className: 'dsh-paths-status' }, STRINGS.renderCrash),
+      return createElement('div', { 'data-dsh-panel-body-crashed': true }, [
+        createElement('p', { key: 'note', className: 'dsh-panel-body-status' }, STRINGS.renderCrash),
         this.props.fallback,
       ]);
     }
@@ -98,7 +98,7 @@ function createGuard(
 }
 
 /**
- * 挂载/点击出错时**别静默**：右下角一条红条，同时给 `<html>` 打一个 `data-dsh-paths-failed`。
+ * 挂载/点击出错时**别静默**：右下角一条红条，同时给 `<html>` 打一个 `data-dsh-panel-body-failed`。
  *
  * 为什么要留这个：打包版 Console 里 DSH 界面是 guest `<webview>`，**console 不落盘**
  * （`console.log` 进不去，warning 也没写），所以"悄悄失效"是最贵的故障 ——
@@ -108,11 +108,11 @@ function reportFailure(error: unknown): void {
   try {
     const message = error instanceof Error ? `${error.name}: ${error.message}` : String(error);
     if (typeof document === 'undefined') return;
-    document.documentElement.setAttribute('data-dsh-paths-failed', message);
-    if (document.getElementById('dsh-paths-failed') !== null) return;
+    document.documentElement.setAttribute('data-dsh-panel-body-failed', message);
+    if (document.getElementById('dsh-panel-body-failed') !== null) return;
     const host = document.body ?? document.documentElement;
     const node = document.createElement('div');
-    node.id = 'dsh-paths-failed';
+    node.id = 'dsh-panel-body-failed';
     node.style.cssText =
       'position:fixed;right:8px;bottom:8px;z-index:2147483647;font:11px/1.5 ui-monospace,monospace;' +
       'padding:4px 8px;border-radius:6px;max-width:60vw;white-space:pre-wrap;background:#c0392b;color:#fff';

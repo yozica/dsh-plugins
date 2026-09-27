@@ -71,11 +71,11 @@ const send=(kind,target,line)=>{
 document.addEventListener('click',(event)=>{
   const start=event.target;
   if(!start||typeof start.closest!=='function')return;
-  const pathElement=start.closest('[data-dsh-paths-reveal]');
+  const pathElement=start.closest('[data-dsh-panel-body-reveal]');
   if(pathElement){
     event.preventDefault();event.stopPropagation();
-    const line=Number(pathElement.getAttribute('data-dsh-paths-line'));
-    send('path',pathElement.getAttribute('data-dsh-paths-reveal'),Number.isFinite(line)&&line>0?line:undefined);
+    const line=Number(pathElement.getAttribute('data-dsh-panel-body-line'));
+    send('path',pathElement.getAttribute('data-dsh-panel-body-reveal'),Number.isFinite(line)&&line>0?line:undefined);
     return;
   }
   const anchor=start.closest('a[href]');
@@ -88,14 +88,14 @@ document.addEventListener('click',(event)=>{
 },true);
 const PATTERN=new RegExp(${pattern},'g');
 const style=document.createElement('style');
-style.textContent='[data-dsh-paths-reveal]{cursor:pointer;text-decoration:underline dotted;text-underline-offset:2px}[data-dsh-paths-reveal]:hover{background:rgba(127,127,127,.18)}';
+style.textContent='[data-dsh-panel-body-reveal]{cursor:pointer;text-decoration:underline dotted;text-underline-offset:2px}[data-dsh-panel-body-reveal]:hover{background:rgba(127,127,127,.18)}';
 (document.head||document.documentElement).appendChild(style);
 const acceptable=(node)=>{
   const parent=node.parentElement;
   if(!parent)return false;
   const tag=parent.tagName;
   if(tag==='SCRIPT'||tag==='STYLE'||tag==='TEXTAREA'||tag==='NOSCRIPT'||tag==='A')return false;
-  if(parent.closest('[data-dsh-paths-reveal]'))return false;
+  if(parent.closest('[data-dsh-panel-body-reveal]'))return false;
   const value=node.nodeValue||'';
   return value.length>2&&value.indexOf('/')>=0;
 };
@@ -119,8 +119,8 @@ const wrap=()=>{
     while((match=PATTERN.exec(text))!==null){
       if(match.index>last)fragment.appendChild(document.createTextNode(text.slice(last,match.index)));
       const span=document.createElement('span');
-      span.setAttribute('data-dsh-paths-reveal',match[1]);
-      if(match[2])span.setAttribute('data-dsh-paths-line',match[2]);
+      span.setAttribute('data-dsh-panel-body-reveal',match[1]);
+      if(match[2])span.setAttribute('data-dsh-panel-body-line',match[2]);
       span.textContent=match[0];
       fragment.appendChild(span);
       last=match.index+match[0].length;

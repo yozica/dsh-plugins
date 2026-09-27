@@ -44,14 +44,14 @@ function render(source: string): { tree: unknown; opened: [PathTarget, PathSourc
 
 test('行内代码里的路径渲染成可点元素，并带行号', () => {
   const { tree } = render('看这个 `src/a.ts:12` 文件');
-  const targets = findAll(tree, (element) => element.props['data-dsh-paths-target'] === 'src/a.ts');
+  const targets = findAll(tree, (element) => element.props['data-dsh-panel-body-target'] === 'src/a.ts');
   assert.equal(targets.length, 1);
   const target = targets[0] as Element;
   assert.equal(target.type, 'code');
-  assert.equal(target.props['data-dsh-paths-line'], 12);
+  assert.equal(target.props['data-dsh-panel-body-line'], 12);
   assert.equal(target.props.role, 'link');
   assert.equal(target.props.tabIndex, 0);
-  assert.equal(target.props.className, 'dsh-paths-target');
+  assert.equal(target.props.className, 'dsh-panel-body-target');
 });
 
 test('点击路径走 onOpenPath（行内代码 vs 链接两种来源）', () => {
@@ -74,8 +74,8 @@ test('指路径的 Markdown 链接渲染成可点的 <a>，但**没有 href**', 
   assert.equal(anchor.props.href, undefined);
   assert.equal(anchor.props.role, 'link');
   assert.equal(anchor.props.tabIndex, 0);
-  assert.equal(anchor.props['data-dsh-paths-kind'], 'link');
-  assert.equal(anchor.props['data-dsh-paths-target'], 'docs/b.md');
+  assert.equal(anchor.props['data-dsh-panel-body-kind'], 'link');
+  assert.equal(anchor.props['data-dsh-panel-body-target'], 'docs/b.md');
 });
 
 /**
@@ -90,15 +90,15 @@ test('链接文字是反引号路径时：点击目标是 href，链接文字不
   const { tree, opened } = render(
     '[`docs/fixtures/panel-body-demo.md`](../../docs/fixtures/panel-body-demo.md)',
   );
-  const links = findAll(tree, (element) => element.props['data-dsh-paths-kind'] === 'link');
+  const links = findAll(tree, (element) => element.props['data-dsh-panel-body-kind'] === 'link');
   assert.equal(links.length, 1);
   const anchor = links[0] as Element;
-  assert.equal(anchor.props['data-dsh-paths-target'], '../../docs/fixtures/panel-body-demo.md');
+  assert.equal(anchor.props['data-dsh-panel-body-target'], '../../docs/fixtures/panel-body-demo.md');
 
   // 关键：`<a>` 里不许再有第二个可点元素（那正是以前吃掉点击的那个）
   const nested = findAll(
     anchor,
-    (element) => element.type !== 'a' && element.props['data-dsh-paths-target'] !== undefined,
+    (element) => element.type !== 'a' && element.props['data-dsh-panel-body-target'] !== undefined,
   );
   assert.equal(nested.length, 0);
 
@@ -118,20 +118,20 @@ test('http(s) 链接走浏览器：target=_blank + rel', () => {
   assert.equal(anchor.props.href, 'https://example.com/a');
   assert.equal(anchor.props.target, '_blank');
   assert.equal(anchor.props.rel, 'noreferrer noopener');
-  assert.equal(anchor.props['data-dsh-paths-target'], undefined);
+  assert.equal(anchor.props['data-dsh-panel-body-target'], undefined);
 });
 
 test('认不出来的 href 不给点（渲染成 span，别让页面乱跳）', () => {
   const { tree } = render('[说明](whatever)');
   const span = findAll(tree, (element) => element.type === 'span')[0] as Element;
-  assert.equal(span.props.className, 'dsh-paths-plain');
+  assert.equal(span.props.className, 'dsh-panel-body-plain');
   assert.equal(findAll(tree, (element) => element.type === 'a').length, 0);
 });
 
 test('代码块里不识别路径（示例代码不该变链接）', () => {
   const { tree } = render('```\nconst p = "src/a.ts";\n```');
   assert.equal(
-    findAll(tree, (element) => element.props['data-dsh-paths-target'] !== undefined).length,
+    findAll(tree, (element) => element.props['data-dsh-panel-body-target'] !== undefined).length,
     0,
   );
   assert.equal(findAll(tree, (element) => element.type === 'pre').length, 1);

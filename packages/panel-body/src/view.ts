@@ -29,7 +29,7 @@ export function renderMarkdown(source: string, deps: ViewDeps): unknown {
   const blocks = parseMarkdown(source);
   return deps.h(
     'div',
-    { className: 'dsh-paths-document', 'data-dsh-paths-document': true },
+    { className: 'dsh-panel-body-document', 'data-dsh-panel-body-document': true },
     ...blocks.map((block, index) => renderBlock(block, deps, `b${index}`)),
   );
 }
@@ -45,7 +45,7 @@ function renderBlock(block: Block, deps: ViewDeps, key: string): unknown {
     case 'code':
       return deps.h(
         'pre',
-        { key, className: 'dsh-paths-pre', 'data-dsh-paths-code': true },
+        { key, className: 'dsh-panel-body-pre', 'data-dsh-panel-body-code': true },
         deps.h(
           'code',
           block.lang === '' ? null : { className: `language-${block.lang}` },
@@ -99,7 +99,7 @@ function renderBlock(block: Block, deps: ViewDeps, key: string): unknown {
           ),
         ),
       );
-      return deps.h('table', { key, className: 'dsh-paths-table' }, head, body);
+      return deps.h('table', { key, className: 'dsh-panel-body-table' }, head, body);
     }
     case 'hr':
       return deps.h('hr', { key });
@@ -132,7 +132,7 @@ function renderInline(nodes: readonly Inline[], deps: ViewDeps, keyPrefix: strin
       case 'code': {
         const target = classifyPathToken(node.value);
         if (target !== null) return pathElement(deps, target, 'code', key, node.value);
-        return deps.h('code', { key, className: 'dsh-paths-code' }, node.value);
+        return deps.h('code', { key, className: 'dsh-panel-body-code' }, node.value);
       }
       case 'strong':
         return deps.h('strong', { key }, ...renderInline(node.children, deps, `${key}s`));
@@ -155,7 +155,7 @@ function renderInline(nodes: readonly Inline[], deps: ViewDeps, keyPrefix: strin
             'a',
             {
               key,
-              className: 'dsh-paths-external',
+              className: 'dsh-panel-body-external',
               href: target.url,
               target: '_blank',
               rel: 'noreferrer noopener',
@@ -165,7 +165,7 @@ function renderInline(nodes: readonly Inline[], deps: ViewDeps, keyPrefix: strin
         }
         if (target.kind === 'anchor') return deps.h('a', { key, href: node.href }, ...children);
         // 认不出来的 href（含指向不存在路径的写法）不给点：渲染成普通文字，别让页面乱跳
-        return deps.h('span', { key, className: 'dsh-paths-plain' }, ...children);
+        return deps.h('span', { key, className: 'dsh-panel-body-plain' }, ...children);
       }
     }
   });
@@ -181,7 +181,7 @@ function renderInline(nodes: readonly Inline[], deps: ViewDeps, keyPrefix: strin
  * 有 `href` 的话壳的 window-open 处理器会把 `#` 解析成应用自身 URL 并用**系统浏览器**打开，
  * 用户会莫名其妙多出一个标签页。官方渲染器的文件提及也是个 `<button>`，同样没有 `href`。
  *
- * `data-dsh-paths-*` 给 e2e 与真机核对用。
+ * `data-dsh-panel-body-*` 给 e2e 与真机核对用。
  */
 function pathElement(
   deps: ViewDeps,
@@ -202,16 +202,16 @@ function pathElement(
   };
   const props: Record<string, unknown> = {
     key,
-    className: 'dsh-paths-target',
+    className: 'dsh-panel-body-target',
     role: 'link',
     tabIndex: 0,
-    'data-dsh-paths-kind': source,
-    'data-dsh-paths-target': target.path,
+    'data-dsh-panel-body-kind': source,
+    'data-dsh-panel-body-target': target.path,
     title: STRINGS.openPathTitle(target.path, target.line),
     onClick: open,
     onKeyDown,
   };
-  if (target.line !== undefined) props['data-dsh-paths-line'] = target.line;
+  if (target.line !== undefined) props['data-dsh-panel-body-line'] = target.line;
   if (source === 'code') return deps.h('code', props, children);
   return deps.h('a', props, children);
 }

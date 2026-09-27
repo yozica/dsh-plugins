@@ -175,7 +175,7 @@ test('契约：Markdown body 渲染可点路径，点击带上当前文件地址
   });
   const target = findElement(
     tree,
-    (element) => element.props['data-dsh-paths-target'] === 'src/a.ts',
+    (element) => element.props['data-dsh-panel-body-target'] === 'src/a.ts',
   );
   assert.ok(target !== null);
   (target.props.onClick as (event: unknown) => void)({ preventDefault: () => {} });
@@ -247,7 +247,7 @@ test('契约：guard（错误边界）会包住我们返回的树', () => {
   assert.deepEqual(Object.keys(tree as object).sort(), ['child', 'fallback', 'type']);
   assert.equal(seen.length, 1);
   // fallback 是"原文 <pre>"：渲染崩了就退回它，而不是白屏
-  assert.equal((seen[0]?.fallback as Element).props['data-dsh-paths-fallback'], true);
+  assert.equal((seen[0]?.fallback as Element).props['data-dsh-panel-body-fallback'], true);
 });
 
 test('契约：渲染抛错时退回原文（fallback 分支）', () => {
@@ -265,6 +265,6 @@ test('契约：渲染抛错时退回原文（fallback 分支）', () => {
   );
   assert.ok(markdown !== undefined);
   const tree = markdown.component({ content: { kind: 'text', text: '正文' } });
-  assert.equal((tree as Element).props['data-dsh-paths-fallback'], true);
+  assert.equal((tree as Element).props['data-dsh-panel-body-fallback'], true);
   assert.equal((tree as Element).children[0], '正文');
 });

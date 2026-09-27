@@ -129,7 +129,7 @@ window.__ModuleLoader__.load({ id: "dshmarket", factory: (require) => {
      `http(s)` → `<a target="_blank">` 交给浏览器（HTML 里经桥 → `window.open`）。
    - sessionId 来源：正文地址 `resourceAddress`（= `tab.contentId`）自己解析（复用 kit 新增的 `parseSessionFileAddress`）。
    - HTML：`src/html.ts` 打包相对 `script` / `link` 资源 + `src/bridge.ts` 生成 iframe `srcdoc`（引导脚本 + 点击拦截 + 路径包裹）。
-4. ✅ 兜底：Markdown 解析/渲染异常退回显示原文（`data-dsh-paths-fallback`）；
+4. ✅ 兜底：Markdown 解析/渲染异常退回显示原文（`data-dsh-panel-body-fallback`）；
    只按扩展名认领 `md` / `markdown` / `html` / `htm`，**我们没认领的地址官方 body 照常生效**
    （候选列表里官方定义仍在，查看器菜单还能切回去）。
 5. ✅ 测试（`packages/panel-body/test/`，35 个）：
@@ -179,7 +179,7 @@ md / html 里的路径有三种写法，语义不同，必须写死规则（否�
   点 `…/plug.ts:30`，滚动落点大约在第 34 行附近，**且没有任何行出现目标的底色高亮**。
   高亮样式是有的（宿主 CSS 里 `.dhJKeW_lineTarget{background:var(--dsw-alias-interactive-bg-hover)}`），
   没出现说明**宿主始终没把那一行认成目标行**。
-  **我们这条链是正确的**：`splitLocation` 解出 `line: 30` → `data-dsh-paths-line="30"` →
+  **我们这条链是正确的**：`splitLocation` 解出 `line: 30` → `data-dsh-panel-body-line="30"` →
   `sidebarRight.openResource(address, { params: { line: 30 } })`，全程没有转换或加偏移。
   宿主侧的自相矛盾在 `dsh-client-ui-sidebar-documentpreview`：渲染侧
   `const number = page.offset + index` 是 **0-based**，而负责揭示目标行的入口注释自称
@@ -196,7 +196,7 @@ md / html 里的路径有三种写法，语义不同，必须写死规则（否�
 | 观察                                | 结果              | 事后判定                                                           |
 | ----------------------------------- | ----------------- | ------------------------------------------------------------------ |
 | 查看器按钮显示 `md · paths`         | ✅                | 定义确实被选中（header 里 `selected.title()`），不是"另一条路生效" |
-| 日志里 `[paths-probe] body invoked` | ❌ 一条没有       | **这条证据无效** —— 见「坑 ②」                                     |
+| 日志里 `[panel-body-probe] body invoked` | ❌ 一条没有       | **这条证据无效** —— 见「坑 ②」                                     |
 | 面板正文                            | 卡在「正在读取…」 | 真原因：定义漏了 `loading`（见下）                                 |
 
 「卡住」是真的，「日志没有」是假的。把这两件事当成一件事查，方向就偏了一整轮。
@@ -208,7 +208,7 @@ md / html 里的路径有三种写法，语义不同，必须写死规则（否�
 
 | 证据                                                                         | 结果               |
 | ---------------------------------------------------------------------------- | ------------------ |
-| 面板正文显示 `[paths-probe] body invoked · dsh-resource://…（content=text）` | ✅ **body 被调用** |
+| 面板正文显示 `[panel-body-probe] body invoked · dsh-resource://…（content=text）` | ✅ **body 被调用** |
 | 组件只返回一个字符串、不引 React，面板就显示那一行（没有 React 报错）        | ✅ 组件契约成立    |
 
 → **接管机制成立；父槽位不需要我们注册；子槽位 `key` 就是 body 定义的 id。**
@@ -272,7 +272,7 @@ content !== void 0 && renderSlot('sidebar.right.tab.document',
   所以**拿 `console.log` 当探针证据 = 永远看不到**。更糟的是实测（0.6.4 + Electron 44）
   那份 `logs/console.log` 自 13:35 起**一字未写**，连 `console.warn` 也没落盘 ——
   所以**最可靠的证据是面板正文**，不是日志。
-- **③ 探针组件一定要返回可见文字**：这次正是那行 `[paths-probe] body invoked · …` 在日志全哑的情况下
+- **③ 探针组件一定要返回可见文字**：这次正是那行 `[panel-body-probe] body invoked · …` 在日志全哑的情况下
   给出了决定性证据。只 `return null` 的话，就只能看到"面板变空"，无法与"没接管"区分。
 - 探针装着期间，**侧栏打开 md / html 会显示探针的占位文字**（地址被我们接管）。
   验完记得撤掉 profile 里那三处改动（依赖行 / bundles 末项 / `node_modules` 符号链接）。
@@ -335,7 +335,7 @@ content !== void 0 && renderSlot('sidebar.right.tab.document',
    （`--dump-config` 会重写 profile 的 `cordis.yml`；在 DSH 自己的沙箱里跑要放行工作区外的写。）
 
 5. **`console.log` 不是取证手段**（见「坑 ②」）。所以正式实现里保留了
-   **失败才会出现**的兜底：右下角一条红条 + `<html data-dsh-paths-failed>`；
+   **失败才会出现**的兜底：右下角一条红条 + `<html data-dsh-panel-body-failed>`；
    成功时界面干干净净。静默失败才是最贵的故障。
 
 ## 审计：优秀插件怎么做，我们改了什么（2026-09-25）
