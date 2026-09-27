@@ -11,8 +11,8 @@
  */
 export const STRINGS = {
   /** 查看器菜单里我们的名字（官方是 `Markdown` / `HTML`，我们用后缀区分） */
-  markdownTitle: 'Markdown · paths',
-  htmlTitle: 'HTML · paths',
+  markdownTitle: 'Markdown · panel-body',
+  htmlTitle: 'HTML · panel-body',
   /** 可点路径的 tooltip */
   openPathTitle: (path: string, line?: number): string =>
     `在侧栏打开 ${path}${line === undefined ? '' : `:${line}`}`,

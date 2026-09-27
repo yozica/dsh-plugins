@@ -5,7 +5,7 @@
 '@yozica/dsh-plugin-reveal': patch
 ---
 
-新增统合包 `@yozica/dsh-plugin-suite`：一个 bundle 装齐 `reveal` + `paths`。它自己不写代码 ——
+新增统合包 `@yozica/dsh-plugin-suite`：一个 bundle 装齐 `reveal` + `panel-body`。它自己不写代码 ——
 一个 manifest 加一份 patch，在同一个 `insert:` 块里把两个插件的 loader 条目一起插进来，
 两个插件作为它的依赖被带进去。于是「全都要」只需装一个包，「只要一个」仍旧装那个单包。
 

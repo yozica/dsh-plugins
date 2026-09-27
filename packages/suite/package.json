@@ -2,7 +2,7 @@
   "name": "@yozica/dsh-plugin-suite",
   "version": "0.1.0",
   "type": "module",
-  "description": "统合包：一个 bundle 装齐 reveal + paths（与单包二选一，见 README）",
+  "description": "统合包：一个 bundle 装齐 reveal + panel-body（与单包二选一，见 README）",
   "files": [
     "cordis.patch.yml",
     "README.md"

@@ -18,7 +18,7 @@ dsh plugin --profile web add @yozica/dsh-plugin-suite
 | 你想要       | 装什么                                   | `dsh.profile.bundles` 里出现                          |
 | ------------ | ---------------------------------------- | ----------------------------------------------------- |
 | 全都要       | `@yozica/dsh-plugin-suite`               | 只有 `…-suite` 一个（两个插件是它的依赖，不各自成层） |
-| 只要其中一个 | `@yozica/dsh-plugin-reveal` 或 `…-paths` | 那个包自己                                            |
+| 只要其中一个 | `@yozica/dsh-plugin-reveal` 或 `…-panel-body` | 那个包自己                                            |
 
 **为什么不能同时装**：统合包那层插的条目 id / name 与单包那份 patch **逐字一致**（都是 `reveal` / `panel-body`）。
 同时装 ⇒ 同一个 id 在组合结果里出现两次 ⇒ dsh 启动时
