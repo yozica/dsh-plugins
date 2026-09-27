@@ -18,11 +18,17 @@
 - **只动本仓**：`dsh-console` 是另一个项目。提交里不写公司信息、不写本机绝对路径与用户名；
   **提交身份一律在仓内钉住**（`git config --local`），不要依赖全局配置 —— 换机器、或本机全局
   身份是别处的配置时，提交就会带错身份。
-- **本仓 `main` 上没有任何服务端强制** —— 走 PR 是我们自己的约定，不是 GitHub 拦的。
-  实测（2026-09-27）：`GET /repos/yozica/dsh-plugins/branches/main/protection` 返回
-  **HTTP 403 `Upgrade to GitHub Pro or make this repository public to enable this feature.`** ——
-  这个仓是 **private + 免费套餐**，分支保护与 rulesets 都不可用（`dsh-console` 是 public，所以那边是真的有保护）。
-  推论：**别拿"服务端会拦"当安全网** —— 直推 `main` 是推得上去的，唯一挡住你的是自己的纪律与 CI 的绿灯。
+- **`main` 有服务端强制，直推会被打回**（2026-09-27 起）：仓库已改为 **public**，并开了 ruleset
+  **`main protection`**（仅 `refs/heads/main`、`enforcement: active`、**绕过名单为空**）：
+  禁止删除分支、禁止强推、**要求 PR**（approvals 0）、**要求状态检查 `check` 通过**。
+  `strict_required_status_checks_policy` 是 `false`（不要求分支先更新到最新）。
+  **判据是服务端原话**，实测直推会得到：
+  `remote: error: GH013: Repository rule violations found for refs/heads/main` +
+  `remote: - Changes must be made through a pull request.`
+  > 历史备注：改 public 之前，这个私有免费仓是**没有**任何服务端强制的 —— 当时
+  > `GET /repos/yozica/dsh-plugins/branches/main/protection` 返回 **HTTP 403
+  > `Upgrade to GitHub Pro or make this repository public to enable this feature.`**
+  > （rulesets 同样 403）。也就是说"PR 纪律"在 2026-09-27 之前只靠人自觉，现在才由 GitHub 兜底。
 - 改了包行为就带一个 changeset 片段（`pnpm changeset`）；发布由**人打标签**触发 CI（`release.yml`），
   **不要**在本地直接 `pnpm publish`（首发那一次除外，见 `docs/publishing.md`）。
 
