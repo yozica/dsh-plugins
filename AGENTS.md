@@ -17,6 +17,11 @@
 - **测试跑的是构建产物** ⇒ 先 `pnpm build`（`pnpm test` 已经包含构建，只跑测试用 `pnpm test:only`）。
 - **只动本仓**：`dsh-console` 是另一个项目。提交里不写公司信息、不写本机绝对路径与用户名；
   提交身份用仓内 `git config --local`（这台机器的全局身份是另一个）。
+- **本仓 `main` 上没有任何服务端强制** —— 走 PR 是我们自己的约定，不是 GitHub 拦的。
+  实测（2026-09-27）：`GET /repos/yozica/dsh-plugins/branches/main/protection` 返回
+  **HTTP 403 `Upgrade to GitHub Pro or make this repository public to enable this feature.`** ——
+  这个仓是 **private + 免费套餐**，分支保护与 rulesets 都不可用（`dsh-console` 是 public，所以那边是真的有保护）。
+  推论：**别拿"服务端会拦"当安全网** —— 直推 `main` 是推得上去的，唯一挡住你的是自己的纪律与 CI 的绿灯。
 - 改了包行为就带一个 changeset 片段（`pnpm changeset`）；发布由**人打标签**触发 CI（`release.yml`），
   **不要**在本地直接 `pnpm publish`（首发那一次除外，见 `docs/publishing.md`）。
 
