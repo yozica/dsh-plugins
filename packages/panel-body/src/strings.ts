@@ -23,7 +23,7 @@ export const STRINGS = {
   /** 错误边界兜底（渲染崩了不该白屏） */
   renderCrash: '这份内容渲染出错，已退回显示原文。',
   /** 右下角失败提示 */
-  mountFailed: (detail: string): string => `[paths] 出错（正文交回官方渲染）：${detail}`,
+  mountFailed: (detail: string): string => `[panel-body] 出错（正文交回官方渲染）：${detail}`,
   /** 日志（warn）用 */
   noSidebarService: '[dsh-plugin-panel-body] 这个界面没有 sidebarRight 服务，路径点了打不开。',
   notSessionAddress: '[dsh-plugin-panel-body] 当前正文不是 session 文件地址，解析不了相对路径：',
