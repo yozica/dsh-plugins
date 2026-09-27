@@ -1,0 +1,33 @@
+{
+  "name": "@yozica/dsh-plugin-suite",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "统合包：一个 bundle 装齐 reveal + paths（与单包二选一，见 README）",
+  "files": [
+    "cordis.patch.yml",
+    "README.md"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yozica/dsh-plugins.git",
+    "directory": "packages/suite"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "scripts": {
+    "build": "node -e \"\"",
+    "typecheck": "node -e \"\"",
+    "prepack": "node -e \"\""
+  },
+  "dependencies": {
+    "@yozica/dsh-plugin-paths": "workspace:*",
+    "@yozica/dsh-plugin-reveal": "workspace:*"
+  }
+}
