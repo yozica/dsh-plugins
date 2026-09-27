@@ -175,6 +175,17 @@ md / html 里的路径有三种写法，语义不同，必须写死规则（否�
 - ⚠️ 依赖宿主 `react` 与 `documentPreviews` / `slots` / `remote.workspaceFiles` 的形状，会随上游变动；
   包可单独卸载，坏了不影响 `reveal` 与 dsh 本体。
 - ⏳ e2e（真 dsh + 无头 Chrome）与"纯浏览器（非 Console）"两条路由还没自动化覆盖。
+- ⚠️ **行号定位（`:30` 那种）由宿主实现，我们控制不了精度 —— 实测有偏差**（2026-09-26 真机）：
+  点 `…/plug.ts:30`，滚动落点大约在第 34 行附近，**且没有任何行出现目标的底色高亮**。
+  高亮样式是有的（宿主 CSS 里 `.dhJKeW_lineTarget{background:var(--dsw-alias-interactive-bg-hover)}`），
+  没出现说明**宿主始终没把那一行认成目标行**。
+  **我们这条链是正确的**：`splitLocation` 解出 `line: 30` → `data-dsh-paths-line="30"` →
+  `sidebarRight.openResource(address, { params: { line: 30 } })`，全程没有转换或加偏移。
+  宿主侧的自相矛盾在 `dsh-client-ui-sidebar-documentpreview`：渲染侧
+  `const number = page.offset + index` 是 **0-based**，而负责揭示目标行的入口注释自称
+  **"1-based source line"**。这是上游的实现，改了下次 dsh 升级就丢 —— **所以我们不做补偿**
+  （补偿宿主 bug 有把正确情形也带偏的风险）。夹具那句"应跳到第 30 行附近"就是这个意思：
+  验收标准是**附近**，不是精确行。
 
 ## 探针实测结论（2026-09-25，真机）
 
@@ -280,6 +291,24 @@ content !== void 0 && renderSlot('sidebar.right.tab.document',
 | 代码块里的路径、`const x = 1`、`and/or`、`a.ts`、`https://…/x.md` **不可点**             | ✅   |
 | 不存在的路径 → 右侧栏显示"读不到"                                                        | ✅   |
 | HTML 预览：相对 CSS 生效、裸路径可点、`<a>` 按 url / path 分流                           | ✅   |
+
+### ⚠️ 这张表当初漏了一格：`..` 越过工作区根（2026-09-26 真机撞上）
+
+上面「Markdown 链接指向路径」只验了**换内容**，没验**目标路径对不对**；而当时的夹具
+`paths-demo.md` 里的链接是**同目录**的 —— 于是「相对路径里的 `..`」整条路从没被走到。
+真机上第一例就挂了：`packages/paths/README.md` 里的 `../../docs/panel-path-links.md`
+打开成了 `packages/paths/docs/panel-path-links.md`（`..` 被当成普通目录名）。
+
+**成因**：插件用**工作区相对路径**拼候选、再用 `read` 探存在性，而 `read` 只认工作区内。
+相对路径经 `..` 越过工作区根后两个候选都探不到，于是退回第一条候选，
+把拼错的相对路径直接写进地址。
+
+**改法**：改用宿主 `workspaceFiles.stat`（它接受"绝对路径或工作区相对路径"，
+**工作区外也允许**）把候选解析成**绝对路径**，再按工作区外的写法造地址 ——
+**解析交给宿主，不自己拼字符串**。
+
+**教训（写下来免得再犯）**：验收表里写"换内容"不够，**要写清目标是什么**；
+夹具也要覆盖"跨目录 / 越过工作区根"这类边界，不能只有同目录那一种。
 
 ### 正式实现路上又踩的三个坑（比探针那轮更贵）
 

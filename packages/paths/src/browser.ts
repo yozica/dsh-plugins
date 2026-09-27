@@ -134,6 +134,19 @@ interface WorkspaceFilesLike {
     range: { offset: number },
     signal?: AbortSignal,
   ): Promise<{ readonly ok: boolean }>;
+  /**
+   * 解析路径并给出它的事实 —— 我们要的是 `absolutePath`（**相对路径越过工作区根**、
+   * 或本来就是工作区外的绝对路径时，只有宿主说得准它落到哪儿）。
+   * 上游契约：`path` 是"绝对路径或工作区相对路径"，**工作区外也允许**。
+   */
+  stat(
+    sessionId: string,
+    path: string,
+    signal?: AbortSignal,
+  ): Promise<
+    | { readonly ok: true; readonly value: { readonly absolutePath: string } }
+    | { readonly ok: false; readonly error: { readonly message: string } }
+  >;
   readRelated(
     sessionId: string,
     path: string,
@@ -217,16 +230,23 @@ function createReadRelated(ctx: PathsContext): ReadRelated | undefined {
   };
 }
 
-/** 存在性探测（相对路径先看"文件所在目录"、再看"工作区根"时用）；拿不到服务就不探测 */
-function createExists(
+/**
+ * 把候选路径**解析成绝对路径**（相对路径先看"文件所在目录"、再看"工作区根"时用）；
+ * 拿不到服务就不解析，退回"直接按第一条规则打开"。
+ *
+ * 这里用 `stat` 而不是 `read`：要的是宿主的**路径解析结果**（`absolutePath`），
+ * 不是"读不读得到"。两者在"相对路径越过工作区根"时结论不同 —— `read` 只认工作区内，
+ * 返回假之后我们就只能拿拼错的相对路径去造地址（老 bug）；`stat` 明确允许工作区外。
+ */
+function createResolve(
   ctx: PathsContext,
   sessionId: string,
-): ((path: string) => Promise<boolean>) | undefined {
+): ((path: string) => Promise<string | undefined>) | undefined {
   const workspaceFiles = workspaceFilesOf(ctx);
   if (workspaceFiles === undefined) return undefined;
-  return async (path: string): Promise<boolean> => {
-    const result = await workspaceFiles.read(sessionId, path, { offset: 1 });
-    return result.ok;
+  return async (path: string): Promise<string | undefined> => {
+    const result = await workspaceFiles.stat(sessionId, path);
+    return result.ok ? result.value.absolutePath : undefined;
   };
 }
 
@@ -257,7 +277,7 @@ async function openTarget(
     {
       sessionId: reference.sessionId,
       filePath: reference.path,
-      exists: createExists(ctx, reference.sessionId),
+      resolve: createResolve(ctx, reference.sessionId),
       open: (resource, line) => {
         sidebar.openResource(resource, line === undefined ? undefined : { params: { line } });
       },

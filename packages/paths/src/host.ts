@@ -56,6 +56,22 @@ export interface PathsContext {
         range: { offset: number },
         signal?: AbortSignal,
       ): Promise<{ readonly ok: boolean }>;
+      /**
+       * 解析一个路径并报告它的事实（**存在性 + 绝对路径**）。
+       *
+       * 为什么不能用 `read` 代替：`read` 只回答"读得到吗"，而我们要的是
+       * **把候选解析成绝对路径**（`value.absolutePath`）—— 相对路径经 `..` 越过工作区根、
+       * 或本来就是工作区外的绝对路径时，只有宿主知道它落到哪儿。
+       * 上游契约：`path` 允许"绝对路径或工作区相对路径"，**工作区外也允许**。
+       */
+      stat(
+        sessionId: string,
+        path: string,
+        signal?: AbortSignal,
+      ): Promise<
+        | { readonly ok: true; readonly value: { readonly absolutePath: string } }
+        | { readonly ok: false; readonly error: { readonly message: string } }
+      >;
       readRelated(
         sessionId: string,
         path: string,

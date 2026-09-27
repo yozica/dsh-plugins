@@ -10,7 +10,8 @@
 
 ## 2. 行内代码：相对工作区根（先按本文件目录找，找不到再按工作区根）
 
-- `dsh-plugins/packages/paths/src/plug.ts:30` —— 应跳到第 30 行附近
+- `dsh-plugins/packages/paths/src/plug.ts:30` —— **要能打开到 plug.ts**（行号定位由宿主实现：
+  实测落点会偏几行、且目标行没有高亮 —— 见 `docs/panel-path-links.md` 的「未决 / 风险」）
 - `dsh-plugins/packages/paths/README.md`
 
 ## 3. Markdown 链接

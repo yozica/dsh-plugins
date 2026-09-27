@@ -78,6 +78,40 @@ test('指路径的 Markdown 链接渲染成可点的 <a>，但**没有 href**', 
   assert.equal(anchor.props['data-dsh-paths-target'], 'docs/b.md');
 });
 
+/**
+ * 真机踩过的 bug：链接文字里带反引号，而那段文字**恰好也是一个合法路径**
+ * （``[`docs/fixtures/paths-demo.md`](../../docs/fixtures/paths-demo.md)``）。
+ *
+ * 以前链接的 children 走 `renderInline`，反引号被渲染成**另一个可点元素**（行内代码路径），
+ * 它先收到点击 ⇒ 点可见文字用的是**链接文字**、不是 href，解析出的目标就错了
+ * （真机现象：README 里这条链接打开成了 `packages/paths/docs/fixtures/paths-demo.md`）。
+ */
+test('链接文字是反引号路径时：点击目标是 href，链接文字不再单独可点', () => {
+  const { tree, opened } = render(
+    '[`docs/fixtures/paths-demo.md`](../../docs/fixtures/paths-demo.md)',
+  );
+  const links = findAll(tree, (element) => element.props['data-dsh-paths-kind'] === 'link');
+  assert.equal(links.length, 1);
+  const anchor = links[0] as Element;
+  assert.equal(anchor.props['data-dsh-paths-target'], '../../docs/fixtures/paths-demo.md');
+
+  // 关键：`<a>` 里不许再有第二个可点元素（那正是以前吃掉点击的那个）
+  const nested = findAll(
+    anchor,
+    (element) => element.type !== 'a' && element.props['data-dsh-paths-target'] !== undefined,
+  );
+  assert.equal(nested.length, 0);
+
+  (anchor.props.onClick as (event: unknown) => void)({ preventDefault: () => {} });
+  assert.deepEqual(opened, [[{ path: '../../docs/fixtures/paths-demo.md' }, 'link']]);
+});
+
+test('链接文字保留原来的反引号写法（展示照旧，只是不再参与路径判定）', () => {
+  const { tree } = render('[`docs/a.md`](../../docs/a.md)');
+  const anchor = findAll(tree, (element) => element.type === 'a')[0] as Element;
+  assert.deepEqual(anchor.children, ['`docs/a.md`']);
+});
+
 test('http(s) 链接走浏览器：target=_blank + rel', () => {
   const { tree } = render('[站点](https://example.com/a)');
   const anchor = findAll(tree, (element) => element.type === 'a')[0] as Element;

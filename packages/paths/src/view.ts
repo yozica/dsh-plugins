@@ -106,6 +106,23 @@ function renderBlock(block: Block, deps: ViewDeps, key: string): unknown {
   }
 }
 
+/**
+ * 把一段行内节点摊成**纯展示文本**：只保留文字，不做任何"这是不是路径"的判定。
+ *
+ * 专给「指向路径的链接」的链接文字用 —— 那部分文字只负责显示，点击目标由 href 决定。
+ * 若走 `renderInline`，反引号会被判成路径并渲染成**另一个可点元素**，它会先吃掉点击
+ * （见 `case 'link'` 的注释）。
+ */
+function plainInline(nodes: readonly Inline[]): string {
+  return nodes
+    .map((node) => {
+      if (node.kind === 'text') return node.value;
+      if (node.kind === 'code') return `\`${node.value}\``;
+      return plainInline(node.children);
+    })
+    .join('');
+}
+
 function renderInline(nodes: readonly Inline[], deps: ViewDeps, keyPrefix: string): unknown[] {
   return nodes.map((node, index) => {
     const key = `${keyPrefix}-${index}`;
@@ -122,9 +139,17 @@ function renderInline(nodes: readonly Inline[], deps: ViewDeps, keyPrefix: strin
       case 'em':
         return deps.h('em', { key }, ...renderInline(node.children, deps, `${key}e`));
       case 'link': {
-        const children = renderInline(node.children, deps, `${key}l`);
         const target = classifyHref(node.href);
-        if (target.kind === 'path') return pathElement(deps, target.target, 'link', key, children);
+        // 指向路径的链接：**目标一律取 href**，children 只当展示。
+        //
+        // 不能拿 `renderInline(children)` 的结果去当链接内容 —— 链接文字里常有反引号
+        // （``[`docs/a.md`](../../docs/a.md)``，文字恰好也是一个合法路径），那样会在 `<a>` 里
+        // 再套一个**可点的行内代码元素**，而它**先收到点击**：于是点可见文字走的是"行内代码"
+        // 那条路、用的是链接文字而不是 href —— 解析出的目标就错了。
+        if (target.kind === 'path') {
+          return pathElement(deps, target.target, 'link', key, plainInline(node.children));
+        }
+        const children = renderInline(node.children, deps, `${key}l`);
         if (target.kind === 'external') {
           return deps.h(
             'a',
