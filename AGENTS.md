@@ -16,7 +16,8 @@
 - 客户端半边由 esbuild 打成 `lib/client.js` + loader 包装（`scripts/build-client.mjs`），宿主包标 external（决定 D）。
 - **测试跑的是构建产物** ⇒ 先 `pnpm build`（`pnpm test` 已经包含构建，只跑测试用 `pnpm test:only`）。
 - **只动本仓**：`dsh-console` 是另一个项目。提交里不写公司信息、不写本机绝对路径与用户名；
-  提交身份用仓内 `git config --local`（这台机器的全局身份是另一个）。
+  **提交身份一律在仓内钉住**（`git config --local`），不要依赖全局配置 —— 换机器、或本机全局
+  身份是别处的配置时，提交就会带错身份。
 - **本仓 `main` 上没有任何服务端强制** —— 走 PR 是我们自己的约定，不是 GitHub 拦的。
   实测（2026-09-27）：`GET /repos/yozica/dsh-plugins/branches/main/protection` 返回
   **HTTP 403 `Upgrade to GitHub Pro or make this repository public to enable this feature.`** ——

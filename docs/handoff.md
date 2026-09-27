@@ -277,8 +277,8 @@ python3 -c "import json;print(json.load(open('$HOME/.dsh/profiles/web/package.js
 
 - **仓库**：`github.com/yozica/dsh-plugins`，**private**，默认分支 `main`。
   目前是旧结构 + 一个"内容干净但历史里有旧对象"的状态 —— 按决定 G **删掉重建**。
-- **git 身份**：这台机器的**全局**身份是另一个（工作用）身份，**不要用它提交**；
-  开工前先在仓内钉住本项目该用的身份：
+- **git 身份**：**一律在仓内钉住**本项目该用的身份，不要依赖全局配置
+  （换一台机器、或本机全局身份是别处的配置时，提交就会带错身份）：
 
   ```bash
   git config --local user.name  <GitHub 用户名>
